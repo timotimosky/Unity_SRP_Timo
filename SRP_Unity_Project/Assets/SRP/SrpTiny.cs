@@ -266,9 +266,9 @@ namespace Kata01
                 //清理myCommandBuffer，设置渲染目标的颜色为摄像机背景
                 var flags = camera.clearFlags;
 
-                myCommandBuffer.ClearRenderTarget(true,true,camera.backgroundColor);
+                //myCommandBuffer.ClearRenderTarget(true,true,camera.backgroundColor);
 
-             //   myCommandBuffer.ClearRenderTarget((flags & CameraClearFlags.Depth) != 0,(flags & CameraClearFlags.Color) != 0,camera.backgroundColor);
+                myCommandBuffer.ClearRenderTarget((flags & CameraClearFlags.Depth) != 0,(flags & CameraClearFlags.Color) != 0,camera.backgroundColor);
 
 
                 //renderContext.DrawSkybox(camera);
@@ -278,7 +278,6 @@ namespace Kata01
                 camera.TryGetCullingParameters(out cullParam);
                 cullParam.isOrthographic = false;
                 CullingResults cullResults = renderContext.Cull(ref cullParam);
-
 
 
                 //在剪裁结果中获取灯光并进行参数获取
@@ -296,9 +295,10 @@ namespace Kata01
                         {
                             //获取灯光参数,平行光朝向即为灯光Z轴方向。矩阵第一到三列分别为xyz轴项，第四列为位置。
                             Vector4 lightpos = light.localToWorldMatrix.GetColumn(2);
+                            //这边获取的灯光的finalColor是灯光颜色乘上强度之后的值，也正好是shader需要的值
                             DLightColors[dLightIndex] = light.finalColor;
                             DLightDirections[dLightIndex] = -lightpos;
-                            DLightDirections[dLightIndex].w = 0;
+                            DLightDirections[dLightIndex].w = 0;//方向光的第四个值(W值)为0，点为1.
                             dLightIndex++;
                         }
                     }
@@ -321,33 +321,20 @@ namespace Kata01
                                 pLightIndex++;
                             }
                         }
-                    }
-
-
-                    ////获取灯光参数,平行光朝向即为灯光Z轴方向。矩阵第一到三列分别为xyz轴项，第四列为位置。
-                    //Vector4 lightpos = light.localToWorldMatrix.GetColumn(2);
-                    ////灯光方向反向。默认管线中，unity提供的平行光方向也是灯光反向。光照计算决定
-                    //Vector4 lightDir = -lightpos;
-                    ////方向的第四个值(W值)为0，点为1.
-                    //lightDir.w = 0;
-                    ////这边获取的灯光的finalColor是灯光颜色乘上强度之后的值，也正好是shader需要的值
-                    //Color lightColor = light.finalColor;
-                    ////利用CommandBuffer进行参数传递。
-                    //myCommandBuffer.SetGlobalVector(_LightDir0, lightDir);
-                    //myCommandBuffer.SetGlobalColor(_LightColor0, lightColor);
-
-    
+                    } 
                 }
                 
                 //传入相机参数。注意是世界空间位置。
                 Vector4 cameraPos = camera.transform.position;
                 myCommandBuffer.SetGlobalVector(_CameraPos, cameraPos);
 
-                //将灯光参数组传入Shader           
+                //利用CommandBuffer进将灯光参数组传入Shader           
                 myCommandBuffer.SetGlobalVectorArray(_LightColor0, DLightColors);
                 myCommandBuffer.SetGlobalVectorArray(_LightDir0, DLightDirections);
 
 
+                myCommandBuffer.SetGlobalVectorArray(_PLightColor, PLightColors);
+                myCommandBuffer.SetGlobalVectorArray(_PLightPos, PLightPos);
 
                 //执行CommandBuffer中的指令
                 renderContext.ExecuteCommandBuffer(myCommandBuffer);

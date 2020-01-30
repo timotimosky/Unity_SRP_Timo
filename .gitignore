@@ -1,0 +1,13 @@
+/SRP_Unity_Project/Packages
+/SRP_Unity_Project/ProjectSettings
+/SRP_Unity_Project/Library
+/SRP_Unity_Project/Logs
+*/Temp/*
+*.lock
+*.ide
+*.ide-shm
+*.ide-wal
+SRP_Unity_Project/.vs/SRP_Unity_Project/v16/.suo
+*.cache
+*.csproj
+*.sln
