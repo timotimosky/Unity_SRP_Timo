@@ -270,19 +270,22 @@ namespace Kata01
 
                 myCommandBuffer.ClearRenderTarget((flags & CameraClearFlags.Depth) != 0,(flags & CameraClearFlags.Color) != 0,camera.backgroundColor);
 
-
+                // renderContext.ExecuteCommandBuffer(myCommandBuffer);
+                //myCommandBuffer.Release();
                 //renderContext.DrawSkybox(camera);
 
-                //同上一节的剪裁
+                //剔除：拿到场景中的所有渲染器，然后剔除那些在摄像机视锥范围之外的渲染器。
+
+                //渲染器：它是附着在游戏对象上的组件，可将它们转变为可以渲染的东西。通常是一个MeshRenderer组件。
                 ScriptableCullingParameters cullParam = new ScriptableCullingParameters();
                 camera.TryGetCullingParameters(out cullParam);
                 cullParam.isOrthographic = false;
                 CullingResults cullResults = renderContext.Cull(ref cullParam);
-
+                renderContext.DrawSkybox(camera);
 
                 //在剪裁结果中获取灯光并进行参数获取
                 var lights = cullResults.visibleLights;
-                myCommandBuffer.name = "Render Lights";
+        
                 int dLightIndex = 0;
                 int pLightIndex = 0;
                 foreach (var light in lights)
@@ -340,15 +343,21 @@ namespace Kata01
                 renderContext.ExecuteCommandBuffer(myCommandBuffer);
                 myCommandBuffer.Clear();
 
-                //同上节，过滤
+
+                //过滤：决定使用哪些渲染器
                 FilteringSettings filtSet = new FilteringSettings(RenderQueueRange.opaque, -1);
                 //filtSet.renderQueueRange = RenderQueueRange.opaque;
                 //filtSet.layerMask = -1;                
 
-                //同上节，设置Renderer Settings
-                //注意在构造的时候就需要传入Lightmode参数，对应shader的pass的tag中的LightMode
+
+                //相机用于设置排序和剔除层，而DrawingSettings控制使用哪个着色器过程进行渲染。
+
+                //决定使用何种渲染排序顺序 对应shader里的	Tags{ "Queue" = "Geometry" } 这属性(不是这个单一属性)
+                //opaque涵盖了从0到2500（包括2500）之间的渲染队列。
                 SortingSettings sortSet = new SortingSettings(camera) { criteria = SortingCriteria.CommonOpaque };
+                //决定使用何种light mode，对应shader的pass的tag中的LightMode
                 DrawingSettings drawSet = new DrawingSettings(new ShaderTagId("BaseLit"), sortSet);
+
 
                 //1.绘制不透明物体
                 renderContext.DrawRenderers(cullResults, ref drawSet, ref filtSet);
@@ -356,9 +365,15 @@ namespace Kata01
                 //2.绘制天空球
                 renderContext.DrawSkybox(camera);
 
+
                 //3.绘制透明物体
-                 sortSet = new SortingSettings(camera) { criteria = SortingCriteria.BackToFront };
-                 drawSet = new DrawingSettings(new ShaderTagId("SRPDefaultUnlit"), sortSet);
+                //，RenderQueueRange.transparent在渲染天空盒之后，将队列范围更改为从2501到5000，包括5000，然后再次渲染。
+                filtSet = new FilteringSettings(RenderQueueRange.transparent, -1);
+                sortSet = new SortingSettings(camera) { criteria = SortingCriteria.BackToFront };
+                //由于我们仅在管道中支持未照明的材质，因此我们将使用Unity的默认未照明通道，该通道由SRPDefaultUnlit标识。
+                drawSet = new DrawingSettings(new ShaderTagId("SRPDefaultUnlit"), sortSet);
+                renderContext.DrawSkybox(camera);
+
                 filtSet.renderQueueRange = RenderQueueRange.transparent;
                 renderContext.DrawRenderers(cullResults, ref drawSet, ref filtSet);
 
@@ -373,5 +388,24 @@ namespace Kata01
                 renderContext.Submit();
             }
         }
+
+        RenderTexture shadowMap;
+        //void RenderShadows(ScriptableRenderContext context)
+        //{
+        //    shadowMap = RenderTexture.GetTemporary(512, 512, 16, RenderTextureFormat.Shadowmap);
+        //    shadowMap.filterMode = FilterMode.Bilinear;
+        //    shadowMap.wrapMode = TextureWrapMode.Clamp;
+        //    CoreUtils.SetRenderTarget(shadowBuffer, shadowMap, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store, ClearFlag.Depth);
+        //    shadowBuffer.BeginSample("Render Shadows");
+        //    context.ExecuteCommandBuffer(shadowBuffer);
+        //    shadowBuffer.Clear();
+
+
+        //    shadowBuffer.EndSample("Render shadows");
+        //    context.ExecuteCommandBuffer(shadowBuffer);
+        //    shadowBuffer.Clear();
+        //}
+
+
     }
 }
