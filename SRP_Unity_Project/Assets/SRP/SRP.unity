@@ -597,7 +597,6 @@ GameObject:
   m_Component:
   - component: {fileID: 751373728}
   - component: {fileID: 751373727}
-  - component: {fileID: 751373726}
   m_Layer: 0
   m_Name: Camera
   m_TagString: Untagged
@@ -605,14 +604,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!81 &751373726
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 751373725}
-  m_Enabled: 1
 --- !u!20 &751373727
 Camera:
   m_ObjectHideFlags: 0
@@ -1175,7 +1166,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 81f63553ae3280140a77829ca288bb0b, type: 2}
+  - {fileID: 2100000, guid: 0bfd74c2ba78b454caf857a7acbcc5a3, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1213,7 +1204,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1196464319}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 6.1, y: 0.118703604, z: -6.1032367}
+  m_LocalPosition: {x: 6.1, y: 0.118703604, z: -2.24}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 1750612985}
@@ -1266,7 +1257,7 @@ GameObject:
   - component: {fileID: 1640360044}
   - component: {fileID: 1640360043}
   m_Layer: 0
-  m_Name: Sphere
+  m_Name: opaque_Sphere
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1767,7 +1758,7 @@ GameObject:
   - component: {fileID: 2113433785}
   - component: {fileID: 2113433784}
   m_Layer: 0
-  m_Name: Cube (4)
+  m_Name: trans_Cube (4)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

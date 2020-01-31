@@ -1,9 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-using UnityEngine.Experimental.Rendering;
-using UnityEngine.Rendering;
+﻿using UnityEngine.Rendering;
 
 //在编辑器环境下，加载编辑器所需的资源操作
 #if UNITY_EDITOR
@@ -11,7 +6,7 @@ using UnityEditor;
 using UnityEditor.ProjectWindowCallback;
 #endif
 
-namespace Kata01
+namespace Tiny_RenderPipeline
 {
    // SRP中的裁剪设置
     //SRP中的过滤设置
@@ -21,7 +16,7 @@ namespace Kata01
     public class CustomRenderPipelineAsset : RenderPipelineAsset
     {
 #if UNITY_EDITOR
-        [MenuItem("Assets/Create/Render Pipeline/Kata01/Pipeline Asset")]
+        [MenuItem("Assets/Create/Render Pipeline/Pipeline Asset")]
         static void CreateKata01Pipeline()
         {
             ProjectWindowUtil.StartNameEditingIfProjectWindowExists(
