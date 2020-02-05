@@ -10,7 +10,7 @@
 	HLSLINCLUDE
 
 	#include "UnityCG.cginc"
-
+	#include"Packages/com.unity.render-pipelines.core/ShaderLibrary/SpaceTransforms.hlsl"
 	//要计算相机方向，还需要物体的世界空间，所以顶点输出结构体中，还需要增加点世界空间位置的输出参数：
 	half4 _CameraPos;
 fixed _SpecularPow;
