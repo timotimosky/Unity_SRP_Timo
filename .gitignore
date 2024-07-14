@@ -11,3 +11,13 @@ SRP_Unity_Project/.vs/SRP_Unity_Project/v16/.suo
 *.cache
 *.csproj
 *.sln
+/Unity6_SRP/Library
+/Unity6_SRP/.vsconfig
+/Unity6_SRP/Assembly-CSharp.csproj
+/Unity6_SRP/Assembly-CSharp-Editor.csproj
+/Unity6_SRP/Unity.RenderPipelines.Universal.Config.Editor.Tests.csproj
+/Unity6_SRP/Unity.RenderPipelines.Universal.Config.Runtime.csproj
+/Unity6_SRP/Unity6_SRP.sln
+/Unity6_SRP/Logs
+/Unity6_SRP/Temp
+/Unity6_SRP/UserSettings
