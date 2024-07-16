@@ -24,16 +24,6 @@ namespace Tiny_RenderPipeline
         //可以使用ScriptableRenderContext.ExecuteCommandBuffer和ScriptableRenderContext.Submit来提交CommandBuffer和ScriptableRenderContext。
         public CommandBuffer myCommandBuffer;
 
-        //在不继续渲染的时候（例如我们切换到了另一个渲染管线）对当前管线进行现场清理。
-        protected override void Dispose(bool dis)
-        {
-            base.Dispose(dis);
-            if (myCommandBuffer != null)
-            {
-                myCommandBuffer.Dispose();//释放CommandBuffer
-                myCommandBuffer = null;
-            }
-        }
         //执行所有的渲染 
         protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
         {
@@ -42,7 +32,7 @@ namespace Tiny_RenderPipeline
         //Camera[]需要为每帧分配内存，因此引入List<Camera> 替代。
         protected override void Render(ScriptableRenderContext renderContext, List<Camera> cameras)
         {
-            RenderAllCamera(renderContext, cameras);
+            RenderAllCameras(renderContext, cameras);
         }
 
         //上述代码是将不支持的“错误Shader”的物体于最后渲染，因为我们不关心它的渲染顺序，我们要做的就是将它展现出来，
@@ -50,13 +40,23 @@ namespace Tiny_RenderPipeline
         // DrawRendererSettings之所以使用“ForwardBase”作为Pass Name，是因为目前我们的SRP只支持前向光照，而默认的表面着色器是有这个Pass的，
         // 如果还想将其他Shader Pass明确作为错误Shader提示，也可用SetShaderPassName方法添加。
 
-       // Unity的默认表面着色器具有ForwardBase通道，该通道用作第一个正向渲染通道。我们可以使用它来识别具有与默认管道一起使用的材质的对象。
+        // Unity的默认表面着色器具有ForwardBase通道，该通道用作第一个正向渲染通道。我们可以使用它来识别具有与默认管道一起使用的材质的对象。
         //通过新的绘图设置选择该通道，并将其与新的默认滤镜设置一起用于渲染。我们不在乎排序或分离不透明渲染器和透明渲染器，因为它们仍然无效。
         Material errorMaterial;
 
+        static ShaderTagId[] legacyShaderTagIds = {
+        new ShaderTagId("Always"),
+        new ShaderTagId("ForwardBase"),
+        new ShaderTagId("PrepassBase"),
+        new ShaderTagId("Vertex"),
+        new ShaderTagId("VertexLMRGBM"),
+        new ShaderTagId("VertexLM")
+        };
+
+
         //仅DrawDefaultPipeline在编辑器中调用。一种方法是通过Conditional向该方法添加属性。
-        [Conditional("UNITY_EDITOR"),Conditional("DEVELOPMENT_BUILD") ]
-        private void DrawErrorShaderObject(CullingResults cullResults,ScriptableRenderContext renderContext, Camera camera)
+        [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
+        private void DrawErrorShaderObject(CullingResults cullResults, ScriptableRenderContext renderContext, Camera camera)
         {
             if (errorMaterial == null)
             {
@@ -65,25 +65,21 @@ namespace Tiny_RenderPipeline
                 {
                     hideFlags = HideFlags.HideAndDontSave
                 };
-            }  
-            
+            }
+
             //由于我们仅在管道中支持未照明的材质，因此我们将使用Unity的默认未照明通道，该通道由SRPDefaultUnlit标识。
             // new FilteringSettings(RenderQueueRange.opaque, -1);
             var filterSettings = new FilteringSettings();
-            SortingSettings sortSet = new SortingSettings(camera) {};//{ criteria = SortingCriteria.CommonOpaque };
+            SortingSettings sortSet = new SortingSettings(camera) { };//{ criteria = SortingCriteria.CommonOpaque };
             //决定使用何种light mode，对应shader的pass的tag中的LightMode
-            DrawingSettings drawSet = new DrawingSettings(new ShaderTagId("ForwardBase"), sortSet);
 
-            //涵盖了Unity提供的所有着色器
-            //现在，使用不受支持的材料的对象显然会显示为不正确。但这仅适用于Unity的默认管道材质，其着色器可以ForwardBase通过。
-            //我们还可以使用其他遍历来识别其他内置着色器，特别是PrepassBase，Always，Vertex，VertexLMRGBM和VertexLM。
-            //幸运的是，可以通过调用将多个遍添加到绘图设置中SetShaderPassName。名称是此方法的第二个参数。它的第一个参数是控制通行证绘制顺序的索引。
-            //我们不在乎，所以任何订单都可以。通过构造函数提供的通道始终具有零索引，只需增加索引即可获得更多通道。
-            drawSet.SetShaderPassName(1, new ShaderTagId("PrepassBase"));
-            drawSet.SetShaderPassName(2, new ShaderTagId("Always"));
-            drawSet.SetShaderPassName(3, new ShaderTagId("Vertex"));
-            drawSet.SetShaderPassName(4, new ShaderTagId("VertexLMRGBM"));
-            drawSet.SetShaderPassName(5, new ShaderTagId("VertexLM"));
+            //旧管线的Unity的默认材质不会被识别，也就是ShaderTagId==ForwardBase的材质
+            //但其他不能被识别的内置着色器（PrepassBase，Always，Vertex，VertexLMRGBM和VertexLM）无法用红色标记出来，所以我们要添加进来，用红色的错误shader来绘制
+            var drawSet = new DrawingSettings(legacyShaderTagIds[1], sortSet);
+            for (int i = 1; i < legacyShaderTagIds.Length; i++)
+            {
+                drawSet.SetShaderPassName(i, legacyShaderTagIds[i]);
+            }
             drawSet.overrideMaterial = errorMaterial;
             drawSet.overrideMaterialPassIndex = 0;
             renderContext.DrawRenderers(cullResults, ref drawSet, ref filterSettings);
@@ -104,16 +100,11 @@ namespace Tiny_RenderPipeline
         Vector4[] PLightColors = new Vector4[maxPointLights];
         Vector4[] PLightPos = new Vector4[maxPointLights];
 
-        void DrawVisibleGeometry()
-        {
-          // context.DrawSkybox(camera);
-        }
-
         static ShaderTagId unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit");
         static ShaderTagId BaseLitShaderTagId = new ShaderTagId("BaseLit");
 
         //剔除：拿到场景中的所有渲染器，然后剔除那些在摄像机视锥范围之外的渲染器。
-        bool Cull(Camera camera, ScriptableRenderContext renderContext,out CullingResults cullResults)
+        bool Cull(Camera camera, ScriptableRenderContext renderContext, out CullingResults cullResults)
         {
             //渲染器：它是附着在游戏对象上的组件，可将它们转变为可以渲染的东西。通常是一个MeshRenderer组件。
 
@@ -131,7 +122,7 @@ namespace Tiny_RenderPipeline
         }
 
         //绘制可见的场景物体
-        void DrawVisibleGeometry(CullingResults cullResults,Camera camera, ScriptableRenderContext renderContext)
+        void DrawVisibleGeometry(CullingResults cullResults, Camera camera, ScriptableRenderContext renderContext)
         {
             //过滤：决定使用哪些渲染器
             FilteringSettings filtSet = new FilteringSettings(RenderQueueRange.opaque, -1);
@@ -160,7 +151,10 @@ namespace Tiny_RenderPipeline
             //1.绘制不透明物体
             renderContext.DrawRenderers(cullResults, ref drawSet, ref filtSet);
 
-            //2.绘制天空球,在不透明物体之后绘制。early-z避免不必要的overdraw。
+
+            // 天空盒在不透明的几何体之后绘制，early-z避免不必要的overdraw。但它会覆盖透明几何体。
+            // 发生这种情况是因为透明着色器不会写入深度缓冲区。他们不会隐藏他们身后的任何东西，因为我们可以看穿他们。
+            // 解决方案是首先绘制不透明的对象，然后是天空盒，然后才是透明的对象。
             renderContext.DrawSkybox(camera);
 
 
@@ -172,14 +166,14 @@ namespace Tiny_RenderPipeline
 
             //必须指出允许哪种着色器通道
             //由于我们仅在管道中支持未照明的材质，因此我们将使用Unity的默认未照明通道，该通道由SRPDefaultUnlit标识。
-           // drawSet = new DrawingSettings(unlitShaderTagId, sortSet);
+            drawSet = new DrawingSettings(unlitShaderTagId, sortSet);
 
-           // renderContext.DrawRenderers(cullResults, ref drawSet, ref filtSet);
+            renderContext.DrawRenderers(cullResults, ref drawSet, ref filtSet);
         }
 
 
 
-        void InitLight(CullingResults cullResults, Camera camera, ScriptableRenderContext renderContext, int D_LightDir, int D_LightColor, int _CameraPos, int _PLightPos, int _PLightColor)
+        void InitLight(CullingResults cullResults, Camera camera, ScriptableRenderContext renderContext)
         {
             //在剪裁结果中获取灯光并进行参数获取
             var lights = cullResults.visibleLights;
@@ -265,7 +259,7 @@ namespace Tiny_RenderPipeline
         }
 
         void Submit(Camera camera, ScriptableRenderContext renderContext)
-        {           
+        {
             myCommandBuffer.EndSample(sampleName);
             //6.渲染上下文提交gpu
             renderContext.Submit();
@@ -280,8 +274,7 @@ namespace Tiny_RenderPipeline
             myCommandBuffer.Clear();
         }
 
-        //完整的基本的兰伯特光照脚本
-        void Render_mutil_light(Camera camera, ScriptableRenderContext renderContext,int D_LightDir,int D_LightColor,int _CameraPos,int _PLightPos,int _PLightColor)
+        void RenderSingleCamera(Camera camera, ScriptableRenderContext renderContext)
         {
 
             //避免没有任何可渲染的物体时，往下渲染
@@ -290,7 +283,6 @@ namespace Tiny_RenderPipeline
                 Debug.Log("没有可渲染物体");
                 return;
             }
-
 
             Setup(camera, renderContext);
 
@@ -310,20 +302,16 @@ namespace Tiny_RenderPipeline
             //初始化一个RendererList
             // RendererListDesc desc = new RendererListDesc();
             // RendererList rendererList = renderContext.CreateRendererList(desc);
-
-            //rendererList.add
-
             renderContext.DrawSkybox(camera);
-
+            //rendererList.add
             //2.初始化灯光信息到CommandBuffer指令
-
-            InitLight(cullResults, camera, renderContext, D_LightDir, D_LightColor, _CameraPos, _PLightPos, _PLightColor);
-
+            //完整的基本的兰伯特光照
+            InitLight(cullResults, camera, renderContext);
 
             ExecuteBuffer(camera, renderContext);
 
             //5.渲染物体的指令填充到上下文
-            DrawVisibleGeometry (cullResults,camera,  renderContext);
+            DrawVisibleGeometry(cullResults, camera, renderContext);
             //绘制错误
             //由于我们的管道仅支持未着色的着色器，因此不会渲染使用不同着色器的对象，从而使它们不可见。尽管这是正确的，
             //但它掩盖了某些对象使用错误着色器的事实。如果我们使用Unity的错误着色器可视化这些对象，那将是很好的，
@@ -350,7 +338,7 @@ namespace Tiny_RenderPipeline
         //Render函数接受两个参数：第一个是被称为ScriptableRenderContext的新概念，我们会在后面介绍，
         //第二个是一个相机数组，包含了所有需要渲染的相机列表。我们一般需要针对列表里每一个相机运行一次管线，
         //但是针对相机种类的不同，可能会使用不同的渲染流程。
-        protected void RenderAllCamera(ScriptableRenderContext renderContext, List<Camera> cameras)
+        protected void RenderAllCameras(ScriptableRenderContext renderContext, List<Camera> cameras)
         {
 
             //渲染开始后，创建CommandBuffer;
@@ -361,7 +349,7 @@ namespace Tiny_RenderPipeline
             for (int i = 0; i < cameras.Count; ++i) //不要使用foreach，以后要对摄像机排序
             {
                 var camera = cameras[i];
-                Render_mutil_light(camera, renderContext, D_LightDir, D_LightColor, _CameraPos, _PLightPos, _PLightColor);
+                RenderSingleCamera(camera, renderContext);
             }
         }
 
@@ -382,6 +370,17 @@ namespace Tiny_RenderPipeline
         //    shadowBuffer.Clear();
         //}
 
+        //在不继续渲染的时候（例如我们切换到了另一个渲染管线）对当前管线进行现场清理。
+        protected override void Dispose(bool dis)
+        {
+            base.Dispose(dis);
+            if (myCommandBuffer != null)
+            {
+                myCommandBuffer.Dispose();//释放CommandBuffer
+                myCommandBuffer = null;
+            }
+        }
 
     }
+
 }
