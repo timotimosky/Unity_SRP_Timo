@@ -1,4 +1,4 @@
-﻿Shader "SRPStudy/BaseLit"
+﻿Shader "SRPStudy/trans"
 {
 	Properties
 	{
@@ -10,10 +10,10 @@
 	HLSLINCLUDE
 
 	#include "UnityCG.cginc"
-
+	#include"Packages/com.unity.render-pipelines.core/ShaderLibrary/SpaceTransforms.hlsl"
 	//要计算相机方向，还需要物体的世界空间，所以顶点输出结构体中，还需要增加点世界空间位置的输出参数：
 	half4 _CameraPos;
-fixed _SpecularPow;
+	fixed _SpecularPow;
 	//这里定义了颜色和基本贴图。这边没有定义贴图的缩放偏移。
 	fixed4 _Color;
 	sampler2D _MainTex;
@@ -129,11 +129,12 @@ fixed _SpecularPow;
 
 		ENDHLSL
 
-		SubShader
+	SubShader
 	{
-		Tags{ "Queue" = "Geometry" }
-			LOD 100
-			Pass
+		Tags{"RenderType" ="SRPDefaultUnlit"
+			"Queue" = "transparent"}
+		LOD 100
+		Pass
 		{
 			//这边注意一下，Unity的默认光照模型中，是没有BaseLit这个类型的。在过去的默认管线中这么
 			//写肯定不行，因为默认管线中的光照必须判断相关的宏定义来获取相关参数。但这边我们自己写

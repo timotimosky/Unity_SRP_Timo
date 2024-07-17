@@ -10,9 +10,9 @@
 
 	#include "UnityCG.cginc"
 	//定义最多4盏点光
-#define MAX_POINT_LIGHTS 4
-half4 _PLightPos[MAX_POINT_LIGHTS];
-fixed4 _PLightColor[MAX_POINT_LIGHTS];
+	#define MAX_POINT_LIGHTS 4
+	half4 _PLightPos[MAX_POINT_LIGHTS];
+	fixed4 _PLightColor[MAX_POINT_LIGHTS];
 
 	//这里定义了颜色和基本贴图。这边没有定义贴图的缩放偏移。
 	fixed4 _Color;
@@ -56,10 +56,11 @@ fixed4 _PLightColor[MAX_POINT_LIGHTS];
 	{
 		//像素管线中计算点光源光照
 		half3 pLight = 0;
+		half3 viewDir =0;
 		for (int n = 0; n < MAX_POINT_LIGHTS; n++)
 		{
 			fixed specular = 0;
-			half3 pLightVector = _PLightPos[n].xyz - i.worldPos;
+			half3 pLightVector = _PLightPos[n].xyz - i.position;
 			half3 pLightDir = normalize(pLightVector);
 			//距离平方，用于计算点光衰减
 			half distanceSqr = max(dot(pLightVector, pLightVector), 0.00001);
