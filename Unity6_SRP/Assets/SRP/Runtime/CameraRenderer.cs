@@ -7,6 +7,21 @@ namespace Tiny_RenderPipeline
     {
         Camera camera;
         ScriptableRenderContext renderContext;
+
+        //CommandBuffer，是指令记录表。Unity使用“先记录，后执行”的策略实现渲染管线，
+        //好比去餐馆吃饭，可能花了好长时间才把菜点完，然后一旦提交给厨房，会一次性把菜做好。
+        //Unity的延迟执行体现在CommandBuffer和ScriptableRenderContext的设计中，这两个对象都充当我们的“菜单”。
+        //将需要执行的执行记录在菜单上以后，
+        //可以使用ScriptableRenderContext.ExecuteCommandBuffer和ScriptableRenderContext.Submit来提交
+        //CommandBuffer和ScriptableRenderContext。
+
+        //我们用一个独立的命令缓冲区来为阴影工作，所以我们在帧调试器中看到阴影和常规场景是在独立的区域渲染的。
+
+        //像绘制天空盒这样的任务我们可以通过特有的方法来控制，但是其他的命令只能通过单独的Command Buffer（命令缓冲区）
+        //我们用一个独立的CommandBuffer来为阴影工作，所以我们在帧调试器中看到阴影和常规场景是在独立的区域渲染的。
+        //CommandBuffers在scriptable rendering pipeline添加之前就已经存在，所以它不是实验性的，
+        //现在我们在绘制skybox之前创建一个commandbuffer对象。
+        //我们通过ExecuteCommandBuffe方法让上下文执行这个buffer，这个命令不会立即执行，他只是把它copy到上下文的内部buffer中。
         CommandBuffer commandBuffer;
         //同样定义好最大平行光数量
         const int maxDirectionalLights = 4;
@@ -22,8 +37,16 @@ namespace Tiny_RenderPipeline
         Vector4[] PLightColors = new Vector4[maxPointLights];
         Vector4[] PLightPos = new Vector4[maxPointLights];
 
-        static ShaderTagId unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit");
-        static ShaderTagId BaseLitShaderTagId = new ShaderTagId("BaseLit");
+        static ShaderTagId 
+            unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit"),
+            BaseLitShaderTagId = new ShaderTagId("BaseLit"),
+            litShaderTagId = new ShaderTagId("CustomLit"),
+		    SrpForwardTagId = new ShaderTagId("SrpForward"),
+		    SrpTransTagId = new ShaderTagId("SrpTrans");
+
+        static int frameBufferId = Shader.PropertyToID("_CameraFrameBuffer");
+
+        static string sampleName = "Render camera";
 
 
         public void RenderSingleCamera(Camera camera, ScriptableRenderContext renderContext, CommandBuffer mCommandBuffer)
@@ -245,7 +268,6 @@ namespace Tiny_RenderPipeline
             commandBuffer.SetGlobalVectorArray(_PLightColor, PLightColors);
             commandBuffer.SetGlobalVectorArray(_PLightPos, PLightPos);
         }
-        public string sampleName = "Render camera";
 
         void Setup()
         {
