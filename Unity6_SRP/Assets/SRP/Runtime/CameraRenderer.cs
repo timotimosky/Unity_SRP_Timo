@@ -49,8 +49,9 @@ public partial class CameraRenderer {
 	{
 		this.renderContext = context;
 		this.camera = camera;
-
-		PrepareBuffer();
+#if UNITY_EDITOR
+        PrepareBuffer();
+#endif
 		PrepareForSceneWindow();
 		if (!Cull(shadowSettings.maxDistance)) 
 		{
@@ -186,7 +187,7 @@ public partial class CameraRenderer {
 		renderContext.ExecuteCommandBuffer(commandBuffer);
         //命令缓冲区会在unity的原生层开辟空间来去存储命令。所以如果我们不再需要这些资源，我们最好马上释放它。
         //我们可以在调用ExecuteCommandBuffer方法之后调用Release方法来释放它。
-        commandBuffer.Release();
+        //commandBuffer.Release();
 		commandBuffer.Clear();
 		
 	}

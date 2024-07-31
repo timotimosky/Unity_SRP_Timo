@@ -70,9 +70,9 @@ public partial class CustomRenderPipeline : RenderPipeline {
     }
 
     //在不继续渲染的时候（例如我们切换到了另一个渲染管线）对当前管线进行现场清理。
-    protected override void Dispose(bool dis)
-    {
-        base.Dispose(dis);
-		renderer.Dispose();
-    }
+  //  protected override void Dispose(bool dis)
+  //  {
+  //      base.Dispose(dis);
+		//renderer.Dispose();
+  //  }
 }
