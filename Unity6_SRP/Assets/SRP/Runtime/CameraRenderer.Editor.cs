@@ -87,7 +87,7 @@ partial class CameraRenderer {
 		renderContext.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
 	}
 
-    //为了在场景视图中看到UI
+
     //尽管Unity帮我们适配了UI在游戏窗口中显示，但不会在场景窗口显示。
     //UI始终存在于场景窗口中的世界空间中，但是我们必须手动将其注入场景中。
     //为了避免游戏窗口中第二次添加UI。必须在cull之前完成此操作。我们仅在渲染场景窗口时才发出UI几何。

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Rendering;
 
 
@@ -35,15 +36,43 @@ public partial class CustomRenderPipeline : RenderPipeline {
 	}
 
 	//Render函数用于每一帧执行所有的渲染，
-	protected override void Render (ScriptableRenderContext context, Camera[] cameras) 
+	protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras) 
 	{
-		foreach (Camera camera in cameras) 
+        foreach (Camera camera in cameras) 
 		{
 			//对列表里每一个相机运行一次管线
 			//针对相机种类的不同，可能会使用不同的渲染流程。
-			renderer.Render(context, camera, allowHDR,useDynamicBatching, useGPUInstancing, 
-				useLightsPerObject,shadowSettings, postFXSettings
-			);
+			renderer.RenderSingleCamera(renderContext, camera, allowHDR,useDynamicBatching, useGPUInstancing, 
+				useLightsPerObject,shadowSettings, postFXSettings);
 		}
 	}
+
+    //Camera[]需要为每帧分配内存，因此引入List<Camera> 替代。
+    protected override void Render(ScriptableRenderContext renderContext, List<Camera> cameras)
+    {
+        RenderAllCameras(renderContext, cameras);
+    }
+
+
+    //Render函数用于每一帧执行所有的渲染，
+    //Render函数接受两个参数：第一个是被称为ScriptableRenderContext的新概念，我们会在后面介绍，
+    //第二个是一个相机数组，包含了所有需要渲染的相机列表。我们一般需要针对列表里每一个相机运行一次管线，
+    //但是针对相机种类的不同，可能会使用不同的渲染流程。
+    protected void RenderAllCameras(ScriptableRenderContext renderContext, List<Camera> cameras)
+    {
+        //所有相机开始逐次渲染
+        for (int i = 0; i < cameras.Count; ++i) //不要使用foreach，以后要对摄像机排序
+        {
+            var camera = cameras[i];
+            renderer.RenderSingleCamera(renderContext, camera, allowHDR, useDynamicBatching, useGPUInstancing,
+    useLightsPerObject, shadowSettings, postFXSettings);
+        }
+    }
+
+    //在不继续渲染的时候（例如我们切换到了另一个渲染管线）对当前管线进行现场清理。
+    protected override void Dispose(bool dis)
+    {
+        base.Dispose(dis);
+		renderer.Dispose();
+    }
 }

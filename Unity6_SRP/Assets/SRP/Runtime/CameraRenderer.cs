@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 
 public partial class CameraRenderer {
 
@@ -43,12 +44,12 @@ public partial class CameraRenderer {
 
 	bool useHDR;
 
-	public void Render (ScriptableRenderContext context, Camera camera, bool allowHDR,bool useDynamicBatching, bool useGPUInstancing,
+	public void RenderSingleCamera (ScriptableRenderContext context, Camera camera, bool allowHDR,bool useDynamicBatching, bool useGPUInstancing,
 		bool useLightsPerObject,ShadowSettings shadowSettings, PostFXSettings postFXSettings) 
 	{
 		this.renderContext = context;
 		this.camera = camera;
-		Debug.LogError("11111");
+
 		PrepareBuffer();
 		PrepareForSceneWindow();
 		if (!Cull(shadowSettings.maxDistance)) 
@@ -162,6 +163,18 @@ public partial class CameraRenderer {
 			commandBuffer.ReleaseTemporaryRT(frameBufferId);
 		}
 	}
+    public void Dispose()
+	{
+        if (commandBuffer != null)
+        {
+          //  commandBuffer.Release();
+            //commandBuffer.Clear();
+
+            commandBuffer.Dispose();//释放CommandBuffer
+            commandBuffer = null;
+        }
+    }
+
 
 	void Submit () {
 		commandBuffer.EndSample(SampleName);
@@ -171,9 +184,9 @@ public partial class CameraRenderer {
 
 	void ExecuteBuffer () {
 		renderContext.ExecuteCommandBuffer(commandBuffer);
-		//命令缓冲区会在unity的原生层开辟空间来去存储命令。所以如果我们不再需要这些资源，我们最好马上释放它。
-		//我们可以在调用ExecuteCommandBuffer方法之后调用Release方法来释放它。
-		//buffer.Release();
+        //命令缓冲区会在unity的原生层开辟空间来去存储命令。所以如果我们不再需要这些资源，我们最好马上释放它。
+        //我们可以在调用ExecuteCommandBuffer方法之后调用Release方法来释放它。
+        commandBuffer.Release();
 		commandBuffer.Clear();
 		
 	}
