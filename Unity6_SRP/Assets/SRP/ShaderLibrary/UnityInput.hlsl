@@ -16,7 +16,7 @@ float3 TransformObjectToWorld (float3 positionOS) {
 	
 #endif
 
-#include "Assets/SRP/ShaderLibrary/Common.hlsl"
+#include "Common.hlsl"
 
 float4 UnlitPassVertex (float3 positionOS : POSITION) : SV_POSITION {
 	float3 positionWS = TransformObjectToWorld(positionOS.xyz);
