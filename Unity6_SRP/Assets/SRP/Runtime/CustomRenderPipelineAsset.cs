@@ -6,7 +6,7 @@ using UnityEditor.ProjectWindowCallback;
 using UnityEngine;
 using UnityEngine.Rendering;
 //RP 资源的主要用途是为 Unity 提供一种获取负责渲染的管道对象实例的方法。资产本身只是一个句柄和存储设置的地方。
-[CreateAssetMenu(fileName = "NewCustomRenderPipelineAsset", menuName = "SRP/Custom Render Pipeline")]
+[CreateAssetMenu(fileName = "New Srp RenderPipeline Asset", menuName = "SRP/New Render Pipeline Asset")]
 public class CustomRenderPipelineAsset : RenderPipelineAsset {
 
 	[SerializeField]
@@ -31,7 +31,7 @@ public class CustomRenderPipelineAsset : RenderPipelineAsset {
     {
         ProjectWindowUtil.StartNameEditingIfProjectWindowExists(
             0, CreateInstance<CreateSrpPipelineAsset>(),
-            "Timo Srp Pipeline.asset", null, null);
+            "Timo Srp Pipeline Asset.asset", null, null);
     }
 
     protected override RenderPipeline CreatePipeline () {
