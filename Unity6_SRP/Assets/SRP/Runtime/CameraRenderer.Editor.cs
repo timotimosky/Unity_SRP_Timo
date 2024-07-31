@@ -1,83 +1,115 @@
-using UnityEditor;
+ï»¿using UnityEditor;
 using UnityEngine;
+using UnityEngine.Profiling;
 using UnityEngine.Rendering;
-namespace Tiny_RenderPipeline
-{
-    public partial class CameraRenderer
-    {
-        partial void DrawGizmos();
 
-        partial void DrawErrorShaderObject(CullingResults cullResults);
+partial class CameraRenderer {
+
+	partial void DrawGizmosBeforeFX ();
+
+	partial void DrawGizmosAfterFX ();
+	
+	partial void DrawUnsupportedShaders ();
+
+	partial void PrepareForSceneWindow ();
+
+	partial void PrepareBuffer ();
+
 #if UNITY_EDITOR
-        //ÉÏÊö´úÂëÊÇ½«²»Ö§³ÖµÄ¡°´íÎóShader¡±µÄÎïÌåÓÚ×îºóäÖÈ¾£¬ÒòÎªÎÒÃÇ²»¹ØĞÄËüµÄäÖÈ¾Ë³Ğò£¬ÎÒÃÇÒª×öµÄ¾ÍÊÇ½«ËüÕ¹ÏÖ³öÀ´£¬
-        //Òò´ËÊ¹ÓÃDrawRendererSettingsµÄSetOverrideMaterial·½·¨£¬ÓÃUnityÄÚÖÃµÄerror shader½øĞĞäÖÈ¾¡£
-        // DrawRendererSettingsÖ®ËùÒÔÊ¹ÓÃ¡°ForwardBase¡±×÷ÎªPass Name£¬ÊÇÒòÎªÄ¿Ç°ÎÒÃÇµÄSRPÖ»Ö§³ÖÇ°Ïò¹âÕÕ£¬¶øÄ¬ÈÏµÄ±íÃæ×ÅÉ«Æ÷ÊÇÓĞÕâ¸öPassµÄ£¬
-        // Èç¹û»¹Ïë½«ÆäËûShader PassÃ÷È·×÷Îª´íÎóShaderÌáÊ¾£¬Ò²¿ÉÓÃSetShaderPassName·½·¨Ìí¼Ó¡£
 
-        // UnityµÄÄ¬ÈÏ±íÃæ×ÅÉ«Æ÷¾ßÓĞForwardBaseÍ¨µÀ£¬¸ÃÍ¨µÀÓÃ×÷µÚÒ»¸öÕıÏòäÖÈ¾Í¨µÀ¡£ÎÒÃÇ¿ÉÒÔÊ¹ÓÃËüÀ´Ê¶±ğ¾ßÓĞÓëÄ¬ÈÏ¹ÜµÀÒ»ÆğÊ¹ÓÃµÄ²ÄÖÊµÄ¶ÔÏó¡£
-        //Í¨¹ıĞÂµÄ»æÍ¼ÉèÖÃÑ¡Ôñ¸ÃÍ¨µÀ£¬²¢½«ÆäÓëĞÂµÄÄ¬ÈÏÂË¾µÉèÖÃÒ»ÆğÓÃÓÚäÖÈ¾¡£ÎÒÃÇ²»ÔÚºõÅÅĞò»ò·ÖÀë²»Í¸Ã÷äÖÈ¾Æ÷ºÍÍ¸Ã÷äÖÈ¾Æ÷£¬ÒòÎªËüÃÇÈÔÈ»ÎŞĞ§¡£
-        Material errorMaterial;
+	static ShaderTagId[] legacyShaderTagIds = {
+		new ShaderTagId("Always"),
+		new ShaderTagId("ForwardBase"),
+		new ShaderTagId("PrepassBase"),
+		new ShaderTagId("Vertex"),
+		new ShaderTagId("VertexLMRGBM"),
+		new ShaderTagId("VertexLM")
+	};
 
-        //Tags { "Queue"="Geometry" "RenderType"="Opaque" }
-        static ShaderTagId[] legacyShaderTagIds = {
-        new ShaderTagId("Always"),
-        new ShaderTagId("ForwardBase"),
-        new ShaderTagId("PrepassBase"),
-        new ShaderTagId("Vertex"),
-        new ShaderTagId("VertexLMRGBM"),
-        new ShaderTagId("VertexLM"),
-         new ShaderTagId("Opaque"),
-        };
+	static Material errorMaterial;
 
-        //»æÖÆ´íÎó
-        //ÓÉÓÚÎÒÃÇµÄ¹ÜµÀ½öÖ§³ÖÎ´×ÅÉ«µÄ×ÅÉ«Æ÷£¬Òò´Ë²»»áäÖÈ¾Ê¹ÓÃ²»Í¬×ÅÉ«Æ÷µÄ¶ÔÏó£¬´Ó¶øÊ¹ËüÃÇ²»¿É¼û¡£¾¡¹ÜÕâÊÇÕıÈ·µÄ£¬
-        //µ«ËüÑÚ¸ÇÁËÄ³Ğ©¶ÔÏóÊ¹ÓÃ´íÎó×ÅÉ«Æ÷µÄÊÂÊµ¡£Èç¹ûÎÒÃÇÊ¹ÓÃUnityµÄ´íÎó×ÅÉ«Æ÷¿ÉÊÓ»¯ÕâĞ©¶ÔÏó£¬ÄÇ½«ÊÇºÜºÃµÄ£¬
-        //Òò´ËËüÃÇÏÔÊ¾ÎªÃ÷ÏÔ²»ÕıÈ·µÄÑóºìÉ«ĞÎ×´¡£ÈÃÎÒÃÇDrawDefaultPipelineÎª´ËÌí¼ÓÒ»¸ö×¨ÓÃ·½·¨£¬ÆäÖĞ°üº¬Ò»¸öÉÏÏÂÎÄºÍÒ»¸öcamera²ÎÊı¡£
-        //ÔÚ»æÖÆÍ¸Ã÷ĞÎ×´Ö®ºó£¬ÎÒÃÇ½«ÔÚ×îºóµ÷ÓÃËü¡£
+	string SampleName { get; set; }
 
-        //½öDrawDefaultPipelineÔÚ±à¼­Æ÷ÖĞµ÷ÓÃ¡£Ò»ÖÖ·½·¨ÊÇÍ¨¹ıConditionalÏò¸Ã·½·¨Ìí¼ÓÊôĞÔ¡£
-        //  [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
-        partial void DrawErrorShaderObject(CullingResults cullResults)
-        {
-            if (errorMaterial == null)
-            {
-                Shader errorShader = Shader.Find("DJL/BoxShader");
-                // Shader.Find("Hidden/InternalErrorShader");
-                Debug.LogError("11111111");
-                errorMaterial = new Material(errorShader)
-                {
-                    hideFlags = HideFlags.HideAndDontSave
-                };
-            }
+	partial void DrawGizmosBeforeFX () {
+		if (Handles.ShouldRenderGizmos()) {
+			renderContext.DrawGizmos(camera, GizmoSubset.PreImageEffects);
+		}
+	}
 
-            //ÓÉÓÚÎÒÃÇ½öÔÚ¹ÜµÀÖĞÖ§³ÖÎ´ÕÕÃ÷µÄ²ÄÖÊ£¬Òò´ËÎÒÃÇ½«Ê¹ÓÃUnityµÄÄ¬ÈÏÎ´ÕÕÃ÷Í¨µÀ£¬¸ÃÍ¨µÀÓÉSRPDefaultUnlit±êÊ¶¡£
-            // new FilteringSettings(RenderQueueRange.opaque, -1);
-            var filterSettings = new FilteringSettings();
-            SortingSettings sortSet = new SortingSettings(camera) { };//{ criteria = SortingCriteria.CommonOpaque };
-                                                                      //¾ö¶¨Ê¹ÓÃºÎÖÖlight mode£¬¶ÔÓ¦shaderµÄpassµÄtagÖĞµÄLightMode
+	partial void DrawGizmosAfterFX () {
+		if (Handles.ShouldRenderGizmos()) {
+			renderContext.DrawGizmos(camera, GizmoSubset.PostImageEffects);
+		}
+	}
 
-            //¾É¹ÜÏßµÄUnityµÄÄ¬ÈÏ²ÄÖÊ²»»á±»Ê¶±ğ£¬Ò²¾ÍÊÇShaderTagId==ForwardBaseµÄ²ÄÖÊ
-            //µ«ÆäËû²»ÄÜ±»Ê¶±ğµÄÄÚÖÃ×ÅÉ«Æ÷£¨PrepassBase£¬Always£¬Vertex£¬VertexLMRGBMºÍVertexLM£©ÎŞ·¨ÓÃºìÉ«±ê¼Ç³öÀ´£¬ËùÒÔÎÒÃÇÒªÌí¼Ó½øÀ´£¬ÓÃºìÉ«µÄ´íÎóshaderÀ´»æÖÆ
-            var drawSet = new DrawingSettings(legacyShaderTagIds[1], sortSet);
-            for (int i = 1; i < legacyShaderTagIds.Length; i++)
-            {
-                drawSet.SetShaderPassName(i, legacyShaderTagIds[i]);
-            }
-            drawSet.overrideMaterial = errorMaterial;
-            drawSet.overrideMaterialPassIndex = 0;
-            renderContext.DrawRenderers(cullResults, ref drawSet, ref filterSettings);
-        }
 
-        partial void DrawGizmos()
-        {
-            if (Handles.ShouldRenderGizmos())
-            {
-                //ÓĞÁ½¸ö×Ó¼¯£¬ÓÃÓÚÍ¼ÏñĞ§¹ûÖ®Ç°ºÍÖ®ºó
-                renderContext.DrawGizmos(camera, GizmoSubset.PreImageEffects);
-                renderContext.DrawGizmos(camera, GizmoSubset.PostImageEffects);
-            }
-        }
+	//ä¸Šè¿°ä»£ç æ˜¯å°†ä¸æ”¯æŒçš„â€œé”™è¯¯Shaderâ€çš„ç‰©ä½“äºæœ€åæ¸²æŸ“ï¼Œå› ä¸ºæˆ‘ä»¬ä¸å…³å¿ƒå®ƒçš„æ¸²æŸ“é¡ºåºï¼Œæˆ‘ä»¬è¦åšçš„å°±æ˜¯å°†å®ƒå±•ç°å‡ºæ¥ï¼Œ
+	//å› æ­¤ä½¿ç”¨DrawRendererSettingsçš„SetOverrideMaterialæ–¹æ³•ï¼Œç”¨Unityå†…ç½®çš„error shaderè¿›è¡Œæ¸²æŸ“ã€‚
+	// DrawRendererSettingsä¹‹æ‰€ä»¥ä½¿ç”¨â€œForwardBaseâ€ä½œä¸ºPass Nameï¼Œæ˜¯å› ä¸ºç›®å‰æˆ‘ä»¬çš„SRPåªæ”¯æŒå‰å‘å…‰ç…§ï¼Œè€Œé»˜è®¤çš„è¡¨é¢ç€è‰²å™¨æ˜¯æœ‰è¿™ä¸ªPassçš„ï¼Œ
+	// å¦‚æœè¿˜æƒ³å°†å…¶ä»–Shader Passæ˜ç¡®ä½œä¸ºé”™è¯¯Shaderæç¤ºï¼Œä¹Ÿå¯ç”¨SetShaderPassNameæ–¹æ³•æ·»åŠ ã€‚
 
+	// Unityçš„é»˜è®¤è¡¨é¢ç€è‰²å™¨å…·æœ‰ForwardBaseé€šé“ï¼Œè¯¥é€šé“ç”¨ä½œç¬¬ä¸€ä¸ªæ­£å‘æ¸²æŸ“é€šé“ã€‚æˆ‘ä»¬å¯ä»¥ä½¿ç”¨å®ƒæ¥è¯†åˆ«å…·æœ‰ä¸é»˜è®¤ç®¡é“ä¸€èµ·ä½¿ç”¨çš„æè´¨çš„å¯¹è±¡ã€‚
+	//é€šè¿‡æ–°çš„ç»˜å›¾è®¾ç½®é€‰æ‹©è¯¥é€šé“ï¼Œå¹¶å°†å…¶ä¸æ–°çš„é»˜è®¤æ»¤é•œè®¾ç½®ä¸€èµ·ç”¨äºæ¸²æŸ“ã€‚æˆ‘ä»¬ä¸åœ¨ä¹æ’åºæˆ–åˆ†ç¦»ä¸é€æ˜æ¸²æŸ“å™¨å’Œé€æ˜æ¸²æŸ“å™¨ï¼Œå› ä¸ºå®ƒä»¬ä»ç„¶æ— æ•ˆã€‚
+
+	//ç”±äºæˆ‘ä»¬çš„ç®¡é“ä»…æ”¯æŒæœªç€è‰²çš„ç€è‰²å™¨ï¼Œå› æ­¤ä¸ä¼šæ¸²æŸ“ä½¿ç”¨ä¸åŒç€è‰²å™¨çš„å¯¹è±¡ï¼Œä»è€Œä½¿å®ƒä»¬ä¸å¯è§ã€‚å°½ç®¡è¿™æ˜¯æ­£ç¡®çš„ï¼Œ
+	//ä½†å®ƒæ©ç›–äº†æŸäº›å¯¹è±¡ä½¿ç”¨é”™è¯¯ç€è‰²å™¨çš„äº‹å®ã€‚å¦‚æœæˆ‘ä»¬ä½¿ç”¨Unityçš„é”™è¯¯ç€è‰²å™¨å¯è§†åŒ–è¿™äº›å¯¹è±¡ï¼Œé‚£å°†æ˜¯å¾ˆå¥½çš„ï¼Œ
+	//å› æ­¤å®ƒä»¬æ˜¾ç¤ºä¸ºæ˜æ˜¾ä¸æ­£ç¡®çš„æ´‹çº¢è‰²å½¢çŠ¶ã€‚è®©æˆ‘ä»¬DrawDefaultPipelineä¸ºæ­¤æ·»åŠ ä¸€ä¸ªä¸“ç”¨æ–¹æ³•ï¼Œå…¶ä¸­åŒ…å«ä¸€ä¸ªä¸Šä¸‹æ–‡å’Œä¸€ä¸ªcameraå‚æ•°ã€‚
+	//åœ¨ç»˜åˆ¶é€æ˜å½¢çŠ¶ä¹‹åï¼Œæˆ‘ä»¬å°†åœ¨æœ€åè°ƒç”¨å®ƒã€‚
+
+	//ä»…DrawDefaultPipelineåœ¨ç¼–è¾‘å™¨ä¸­è°ƒç”¨ã€‚ä¸€ç§æ–¹æ³•æ˜¯é€šè¿‡Conditionalå‘è¯¥æ–¹æ³•æ·»åŠ å±æ€§ã€‚
+	//	[Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
+	partial void DrawUnsupportedShaders () {
+		if (errorMaterial == null) {
+			errorMaterial =new Material(Shader.Find("Hidden/InternalErrorShader"))
+			{
+				hideFlags = HideFlags.HideAndDontSave
+			};
+		}
+
+		//æ¶µç›–äº†Unityæä¾›çš„æ‰€æœ‰ç€è‰²å™¨
+		//ç°åœ¨ï¼Œä½¿ç”¨ä¸å—æ”¯æŒçš„ææ–™çš„å¯¹è±¡æ˜¾ç„¶ä¼šæ˜¾ç¤ºä¸ºä¸æ­£ç¡®ã€‚ä½†è¿™ä»…é€‚ç”¨äºUnityçš„é»˜è®¤ç®¡é“æè´¨ï¼Œå…¶ç€è‰²å™¨å¯ä»¥ForwardBaseé€šè¿‡ã€‚
+		//æˆ‘ä»¬è¿˜å¯ä»¥ä½¿ç”¨å…¶ä»–éå†æ¥è¯†åˆ«å…¶ä»–å†…ç½®ç€è‰²å™¨ï¼Œç‰¹åˆ«æ˜¯PrepassBaseï¼ŒAlwaysï¼ŒVertexï¼ŒVertexLMRGBMå’ŒVertexLMã€‚
+		//å¹¸è¿çš„æ˜¯ï¼Œå¯ä»¥é€šè¿‡è°ƒç”¨å°†å¤šä¸ªéæ·»åŠ åˆ°ç»˜å›¾è®¾ç½®ä¸­SetShaderPassNameã€‚åç§°æ˜¯æ­¤æ–¹æ³•çš„ç¬¬äºŒä¸ªå‚æ•°ã€‚å®ƒçš„ç¬¬ä¸€ä¸ªå‚æ•°æ˜¯æ§åˆ¶é€šè¡Œè¯ç»˜åˆ¶é¡ºåºçš„ç´¢å¼•ã€‚
+		//æˆ‘ä»¬ä¸åœ¨ä¹ï¼Œæ‰€ä»¥ä»»ä½•è®¢å•éƒ½å¯ä»¥ã€‚é€šè¿‡æ„é€ å‡½æ•°æä¾›çš„é€šé“å§‹ç»ˆå…·æœ‰é›¶ç´¢å¼•ï¼Œåªéœ€å¢åŠ ç´¢å¼•å³å¯è·å¾—æ›´å¤šé€šé“ã€‚
+		//å†³å®šä½¿ç”¨ä½•ç§light modeï¼Œå¯¹åº”shaderçš„passçš„tagä¸­çš„LightMode
+		DrawingSettings drawingSettings = new DrawingSettings(legacyShaderTagIds[0], new SortingSettings(camera)) 
+		{
+			overrideMaterial = errorMaterial
+			//overrideMaterialPassIndex = 0;
+		};
+
+		for (int i = 1; i < legacyShaderTagIds.Length; i++) {
+			drawingSettings.SetShaderPassName(i, legacyShaderTagIds[i]);
+		}
+		//ç”±äºæˆ‘ä»¬ä»…åœ¨ç®¡é“ä¸­æ”¯æŒæœªç…§æ˜çš„æè´¨ï¼Œå› æ­¤æˆ‘ä»¬å°†ä½¿ç”¨Unityçš„é»˜è®¤æœªç…§æ˜é€šé“ï¼Œè¯¥é€šé“ç”±SRPDefaultUnlitæ ‡è¯†ã€‚
+		// new FilteringSettings(RenderQueueRange.opaque, -1);
+		FilteringSettings filteringSettings = FilteringSettings.defaultValue;
+		renderContext.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+	}
+
+    //ä¸ºäº†åœ¨åœºæ™¯è§†å›¾ä¸­çœ‹åˆ°UI
+    //å°½ç®¡Unityå¸®æˆ‘ä»¬é€‚é…äº†UIåœ¨æ¸¸æˆçª—å£ä¸­æ˜¾ç¤ºï¼Œä½†ä¸ä¼šåœ¨åœºæ™¯çª—å£æ˜¾ç¤ºã€‚
+    //UIå§‹ç»ˆå­˜åœ¨äºåœºæ™¯çª—å£ä¸­çš„ä¸–ç•Œç©ºé—´ä¸­ï¼Œä½†æ˜¯æˆ‘ä»¬å¿…é¡»æ‰‹åŠ¨å°†å…¶æ³¨å…¥åœºæ™¯ä¸­ã€‚
+    //ä¸ºäº†é¿å…æ¸¸æˆçª—å£ä¸­ç¬¬äºŒæ¬¡æ·»åŠ UIã€‚å¿…é¡»åœ¨cullä¹‹å‰å®Œæˆæ­¤æ“ä½œã€‚æˆ‘ä»¬ä»…åœ¨æ¸²æŸ“åœºæ™¯çª—å£æ—¶æ‰å‘å‡ºUIå‡ ä½•ã€‚
+    //cameraTypeç›¸æœºç­‰äºCameraType.SceneViewçš„æ—¶å€™å°±æ˜¯è¿™ç§æƒ…å†µã€‚
+    //åœ¨åœºæ™¯ç¼–è¾‘ç•Œé¢æ˜¾ç¤ºUI
+    partial void PrepareForSceneWindow () {
+#if UNITY_EDITOR
+        if (camera.cameraType == CameraType.SceneView) {
+			ScriptableRenderContext.EmitWorldGeometryForSceneView(camera);
+		}
 #endif
     }
+
+    partial void PrepareBuffer () {
+		Profiler.BeginSample("Editor Only");
+		commandBuffer.name = SampleName = camera.name;
+		Profiler.EndSample();
+	}
+
+#else
+
+	const string SampleName = bufferName;
+
+#endif
 }

@@ -1,304 +1,235 @@
-using System.Collections.Generic;
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.Rendering;
-namespace Tiny_RenderPipeline
-{
-    public partial class CameraRenderer
-    {
-        Camera camera;
-        ScriptableRenderContext renderContext;
-
-        //CommandBuffer£¬ÊÇÖ¸Áî¼ÇÂ¼±í¡£UnityÊ¹ÓÃ¡°ÏÈ¼ÇÂ¼£¬ºóÖ´ĞĞ¡±µÄ²ßÂÔÊµÏÖäÖÈ¾¹ÜÏß£¬
-        //ºÃ±ÈÈ¥²Í¹İ³Ô·¹£¬¿ÉÄÜ»¨ÁËºÃ³¤Ê±¼ä²Å°Ñ²ËµãÍê£¬È»ºóÒ»µ©Ìá½»¸ø³ø·¿£¬»áÒ»´ÎĞÔ°Ñ²Ë×öºÃ¡£
-        //UnityµÄÑÓ³ÙÖ´ĞĞÌåÏÖÔÚCommandBufferºÍScriptableRenderContextµÄÉè¼ÆÖĞ£¬ÕâÁ½¸ö¶ÔÏó¶¼³äµ±ÎÒÃÇµÄ¡°²Ëµ¥¡±¡£
-        //½«ĞèÒªÖ´ĞĞµÄÖ´ĞĞ¼ÇÂ¼ÔÚ²Ëµ¥ÉÏÒÔºó£¬
-        //¿ÉÒÔÊ¹ÓÃScriptableRenderContext.ExecuteCommandBufferºÍScriptableRenderContext.SubmitÀ´Ìá½»
-        //CommandBufferºÍScriptableRenderContext¡£
-
-        //ÎÒÃÇÓÃÒ»¸ö¶ÀÁ¢µÄÃüÁî»º³åÇøÀ´ÎªÒõÓ°¹¤×÷£¬ËùÒÔÎÒÃÇÔÚÖ¡µ÷ÊÔÆ÷ÖĞ¿´µ½ÒõÓ°ºÍ³£¹æ³¡¾°ÊÇÔÚ¶ÀÁ¢µÄÇøÓòäÖÈ¾µÄ¡£
-
-        //Ïñ»æÖÆÌì¿ÕºĞÕâÑùµÄÈÎÎñÎÒÃÇ¿ÉÒÔÍ¨¹ıÌØÓĞµÄ·½·¨À´¿ØÖÆ£¬µ«ÊÇÆäËûµÄÃüÁîÖ»ÄÜÍ¨¹ıµ¥¶ÀµÄCommand Buffer£¨ÃüÁî»º³åÇø£©
-        //ÎÒÃÇÓÃÒ»¸ö¶ÀÁ¢µÄCommandBufferÀ´ÎªÒõÓ°¹¤×÷£¬ËùÒÔÎÒÃÇÔÚÖ¡µ÷ÊÔÆ÷ÖĞ¿´µ½ÒõÓ°ºÍ³£¹æ³¡¾°ÊÇÔÚ¶ÀÁ¢µÄÇøÓòäÖÈ¾µÄ¡£
-        //CommandBuffersÔÚscriptable rendering pipelineÌí¼ÓÖ®Ç°¾ÍÒÑ¾­´æÔÚ£¬ËùÒÔËü²»ÊÇÊµÑéĞÔµÄ£¬
-        //ÏÖÔÚÎÒÃÇÔÚ»æÖÆskyboxÖ®Ç°´´½¨Ò»¸öcommandbuffer¶ÔÏó¡£
-        //ÎÒÃÇÍ¨¹ıExecuteCommandBuffe·½·¨ÈÃÉÏÏÂÎÄÖ´ĞĞÕâ¸öbuffer£¬Õâ¸öÃüÁî²»»áÁ¢¼´Ö´ĞĞ£¬ËûÖ»ÊÇ°ÑËücopyµ½ÉÏÏÂÎÄµÄÄÚ²¿bufferÖĞ¡£
-        CommandBuffer commandBuffer;
-        //Í¬Ñù¶¨ÒåºÃ×î´óÆ½ĞĞ¹âÊıÁ¿
-        const int maxDirectionalLights = 4;
-        //½«µÆ¹â²ÎÊı¸ÄÎª²ÎÊı×é
-        //var _LightDir0 = Shader.PropertyToID("_LightDir0");
-        //var _LightColor0 = Shader.PropertyToID("_LightColor0");    
-        Vector4[] DLightColors = new Vector4[maxDirectionalLights];
-        Vector4[] DLightDirections = new Vector4[maxDirectionalLights];
-
-
-        //Í¬Ñù¶¨ÒåºÃ×î´óµã¹âÊıÁ¿
-        const int maxPointLights = 4;
-        Vector4[] PLightColors = new Vector4[maxPointLights];
-        Vector4[] PLightPos = new Vector4[maxPointLights];
-
-        static ShaderTagId 
-            unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit"),
-            BaseLitShaderTagId = new ShaderTagId("BaseLit"),
-            litShaderTagId = new ShaderTagId("CustomLit"),
-		    SrpForwardTagId = new ShaderTagId("SrpForward"),
-		    SrpTransTagId = new ShaderTagId("SrpTrans");
-
-        static int frameBufferId = Shader.PropertyToID("_CameraFrameBuffer");
-
-        static string sampleName = "Render camera";
-
-
-        public void RenderSingleCamera(Camera camera, ScriptableRenderContext renderContext, CommandBuffer mCommandBuffer)
-        {
-            this.camera = camera;
-            this.renderContext = renderContext;
-            this.commandBuffer = mCommandBuffer;
-
-#if UNITY_EDITOR
-            //ÎªÁËÔÚ³¡¾°ÊÓÍ¼ÖĞ¿´µ½UI
-            //¾¡¹ÜUnity°ïÎÒÃÇÊÊÅäÁËUIÔÚÓÎÏ·´°¿ÚÖĞÏÔÊ¾£¬µ«²»»áÔÚ³¡¾°´°¿ÚÏÔÊ¾¡£
-            //UIÊ¼ÖÕ´æÔÚÓÚ³¡¾°´°¿ÚÖĞµÄÊÀ½ç¿Õ¼äÖĞ£¬µ«ÊÇÎÒÃÇ±ØĞëÊÖ¶¯½«Æä×¢Èë³¡¾°ÖĞ¡£
-            //ÎªÁË±ÜÃâÓÎÏ·´°¿ÚÖĞµÚ¶ş´ÎÌí¼ÓUI¡£±ØĞëÔÚcullÖ®Ç°Íê³É´Ë²Ù×÷¡£ÎÒÃÇ½öÔÚäÖÈ¾³¡¾°´°¿ÚÊ±²Å·¢³öUI¼¸ºÎ¡£
-            //cameraTypeÏà»úµÈÓÚCameraType.SceneViewµÄÊ±ºò¾ÍÊÇÕâÖÖÇé¿ö¡£
-            if (camera.cameraType == CameraType.SceneView)
-            {
-                //ÒÔµ±Ç°ÉãÏñ»úÎª²ÎÊıÀ´Ìí¼ÓUI
-                ScriptableRenderContext.EmitWorldGeometryForSceneView(camera);
-            }
-#endif
 
-            //±ÜÃâÃ»ÓĞÈÎºÎ¿ÉäÖÈ¾µÄÎïÌåÊ±£¬ÍùÏÂäÖÈ¾
-            if (!Cull(out CullingResults cullResults))
-            {
-                Debug.Log("Ã»ÓĞ¿ÉäÖÈ¾ÎïÌå");
-                return;
-            }
-
-            Setup();
-
-
-            //³õÊ¼»¯Ò»¸öRendererList
-            // RendererListDesc desc = new RendererListDesc();
-            // RendererList rendererList = renderContext.CreateRendererList(desc);
-
-            //rendererList.add
-            //2.³õÊ¼»¯µÆ¹âĞÅÏ¢µ½CommandBufferÖ¸Áî
-            //ÍêÕûµÄ»ù±¾µÄÀ¼²®ÌØ¹âÕÕ
-            InitLight(cullResults);
-
-            ExecuteBuffer();
-
-            //5.äÖÈ¾ÎïÌåµÄÖ¸ÁîÌî³äµ½ÉÏÏÂÎÄ
-            DrawVisibleGeometry(cullResults);
-#if UNITY_EDITOR
-            DrawErrorShaderObject(cullResults);
-#endif
-            //½«Õâ¸örenderlist¼ÓÈëcommandBuffer
-            // commandBuffer.DrawRendererList(rendererList);
-            Submit();
-        }
-
-        //»æÖÆ¿É¼ûµÄ³¡¾°ÎïÌå
-        void DrawVisibleGeometry(CullingResults cullResults)
-        {
-            //¹ıÂË£º¾ö¶¨Ê¹ÓÃÄÄĞ©äÖÈ¾Æ÷
-            FilteringSettings filtSet = new FilteringSettings(RenderQueueRange.opaque, -1);
-            //filtSet.renderQueueRange = RenderQueueRange.opaque;
-            //filtSet.layerMask = -1;                
-
-
-            //Ïà»úÓÃÓÚÉèÖÃÅÅĞòºÍÌŞ³ı²ã£¬¶øDrawingSettings¿ØÖÆÊ¹ÓÃÄÄ¸ö×ÅÉ«Æ÷¹ı³Ì½øĞĞäÖÈ¾¡£
-
-
-            //È·¶¨ÊÇÓ¦ÓÃÕı½»ÅÅĞò»¹ÊÇ»ùÓÚ¾àÀëµÄÅÅĞò
-            //¾ö¶¨Ê¹ÓÃºÎÖÖäÖÈ¾ÅÅĞòË³Ğò ¶ÔÓ¦shaderÀïµÄ	Tags{ "Queue" = "Geometry" } ÕâÊôĞÔ(²»ÊÇÕâ¸öµ¥Ò»ÊôĞÔ)
-            //opaqueº­¸ÇÁË´Ó0µ½2500£¨°üÀ¨2500£©Ö®¼äµÄäÖÈ¾¶ÓÁĞ¡£
-
-
-            // CommonOpaqueÅÅĞòÊ±£¬´ó²¿·ÖÊ±ºò£¬¶ÔÏó´ÓÇ°µ½ºó»æÖÆ£¬Õâ¶ÔÓÚ²»Í¸Ã÷µÄ¶ÔÏóÀ´ËµÊÇÀíÏëµÄÑ¡Ôñ£º
-            // Èç¹ûÄ³Îï×îÖÕ±»»æÖÆÔÚÆäËûÎïºóÃæ£¬Ôò¿ÉÒÔÌø¹ıÆäÒş²ØµÄÆ¬¶Î£¬´Ó¶ø¼Ó¿ìäÖÈ¾ËÙ¶È¡£
-            // ³£¼ûµÄ²»Í¸Ã÷ÅÅĞòÑ¡Ïî»¹¿¼ÂÇÁËÒ»Ğ©ÆäËûÌõ¼ş£¬°üÀ¨äÖÈ¾¶ÓÁĞºÍ²ÄÖÊ¡£
-
-            SortingSettings sortingSettings = new SortingSettings(camera) { criteria = SortingCriteria.CommonOpaque };
-
-            //¾ö¶¨Ê¹ÓÃºÎÖÖlight mode£¬¶ÔÓ¦shaderµÄpassµÄtagÖĞµÄLightMode
-            DrawingSettings drawingSettings = new DrawingSettings(BaseLitShaderTagId, sortingSettings);
-
-
-            //1.»æÖÆ²»Í¸Ã÷ÎïÌå
-            renderContext.DrawRenderers(cullResults, ref drawingSettings, ref filtSet);
-
-
-            // Ìì¿ÕºĞÔÚ²»Í¸Ã÷µÄ¼¸ºÎÌåÖ®ºó»æÖÆ£¬early-z±ÜÃâ²»±ØÒªµÄoverdraw¡£µ«Ëü»á¸²¸ÇÍ¸Ã÷¼¸ºÎÌå¡£
-            // ·¢ÉúÕâÖÖÇé¿öÊÇÒòÎªÍ¸Ã÷×ÅÉ«Æ÷²»»áĞ´ÈëÉî¶È»º³åÇø¡£ËûÃÇ²»»áÒş²ØËûÃÇÉíºóµÄÈÎºÎ¶«Î÷£¬ÒòÎªÎÒÃÇ¿ÉÒÔ¿´´©ËûÃÇ¡£
-            // ½â¾ö·½°¸ÊÇÊ×ÏÈ»æÖÆ²»Í¸Ã÷µÄ¶ÔÏó£¬È»ºóÊÇÌì¿ÕºĞ£¬È»ºó²ÅÊÇÍ¸Ã÷µÄ¶ÔÏó¡£
-            renderContext.DrawSkybox(camera);
-
-
-            //3.»æÖÆÍ¸Ã÷ÎïÌå
-            //£¬RenderQueueRange.transparentÔÚäÖÈ¾Ìì¿ÕºĞÖ®ºó£¬½«¶ÓÁĞ·¶Î§¸ü¸ÄÎª´Ó2501µ½5000£¬°üÀ¨5000£¬È»ºóÔÙ´ÎäÖÈ¾¡£
-            filtSet.renderQueueRange = RenderQueueRange.transparent;
-            sortingSettings.criteria = SortingCriteria.CommonTransparent;
-
-
-            //±ØĞëÖ¸³öÔÊĞíÄÄÖÖ×ÅÉ«Æ÷Í¨µÀ
-            //ÓÉÓÚÎÒÃÇ½öÔÚ¹ÜµÀÖĞÖ§³ÖÎ´ÕÕÃ÷µÄ²ÄÖÊ£¬Òò´ËÎÒÃÇ½«Ê¹ÓÃUnityµÄÄ¬ÈÏÎ´ÕÕÃ÷Í¨µÀ£¬¸ÃÍ¨µÀÓÉSRPDefaultUnlit±êÊ¶¡£
-            drawingSettings = new DrawingSettings(unlitShaderTagId, sortingSettings);
-
-            renderContext.DrawRenderers(cullResults, ref drawingSettings, ref filtSet);
-        }
-
-
-        //Ã¿¸ösetpasscall£¬¶¼Òªµ÷ÓÃÒ»´Î
-        void ExecuteBuffer()
-        {
-            //3.¸´ÖÆCommandBufferÖ¸Áî£¬Ìî³äµ½ÉÏÏÂÎÄ
-            renderContext.ExecuteCommandBuffer(commandBuffer);
-            //CommandBufferÖ¸Áî¿ÉÒÔÖØÓÃ£¬ËùÒÔÎÒÃÇÊÖ¶¯ÇåÀíÏÂ
-            commandBuffer.Clear();
-        }
-
-
-
-        //½«shaderÖĞĞèÒªµÄÊôĞÔ²ÎÊıÓ³ÉäÎªID£¬¼ÓËÙ´«²Î
-        int D_LightDir = Shader.PropertyToID("_DLightDir");
-        int D_LightColor = Shader.PropertyToID("_DLightColor");
-        //ÔÚÉèÖÃµÆ¹â²ÎÊıIDÏÂÃæÔö¼ÓÏà»ú²ÎÊıID£º
-        int _CameraPos = Shader.PropertyToID("_CameraPos");
-
-        int _PLightPos = Shader.PropertyToID("_PLightPos");
-        int _PLightColor = Shader.PropertyToID("_PLightColor");
-
-
-
-
-        RenderTexture shadowMap;
-        //void RenderShadows(ScriptableRenderContext context)
-        //{
-        //    shadowMap = RenderTexture.GetTemporary(512, 512, 16, RenderTextureFormat.Shadowmap);
-        //    shadowMap.filterMode = FilterMode.Bilinear;
-        //    shadowMap.wrapMode = TextureWrapMode.Clamp;
-        //    CoreUtils.SetRenderTarget(shadowBuffer, shadowMap, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store, ClearFlag.Depth);
-        //    shadowBuffer.BeginSample("Render Shadows");
-        //    context.ExecuteCommandBuffer(shadowBuffer);
-        //    shadowBuffer.Clear();
-
-
-        //    shadowBuffer.EndSample("Render shadows");
-        //    context.ExecuteCommandBuffer(shadowBuffer);
-        //    shadowBuffer.Clear();
-        //}
-
-
-
-        //ÌŞ³ı£ºÄÃµ½³¡¾°ÖĞµÄËùÓĞäÖÈ¾Æ÷£¬È»ºóÌŞ³ıÄÇĞ©ÔÚÉãÏñ»úÊÓ×¶·¶Î§Ö®ÍâµÄäÖÈ¾Æ÷¡£
-        bool Cull( out CullingResults cullResults)
-        {
-            //äÖÈ¾Æ÷£ºËüÊÇ¸½×ÅÔÚÓÎÏ·¶ÔÏóÉÏµÄ×é¼ş£¬¿É½«ËüÃÇ×ª±äÎª¿ÉÒÔäÖÈ¾µÄ¶«Î÷¡£Í¨³£ÊÇÒ»¸öMeshRenderer×é¼ş¡£
-
-            //Ê×ÏÈÅĞ¶ÏÏà»úÊÇ·ñÖ§³ÖäÖÈ¾
-            if (camera.TryGetCullingParameters(out ScriptableCullingParameters cullParam))
-            {
-                cullParam.isOrthographic = false;
-
-                //refoutÓÃ×÷ÓÅ»¯£¬ÒÔ·ÀÖ¹´«µİ½á¹¹µÄ¸±±¾£¬¸Ã¸±±¾Ïàµ±´ó¡£cullParamÊÇÒ»¸ö½á¹¹¶ø²»ÊÇÒ»¸ö¶ÔÏóÊÇÁíÒ»ÖÖÓÅ»¯£¬ÒÔ·ÀÖ¹ÄÚ´æ·ÖÅä¡£
-                cullResults = renderContext.Cull(ref cullParam);
-                return true;
-            }
-            cullResults = new CullingResults();
-            return false;
-        }
-
-        void InitLight(CullingResults cullResults)
-        {
-            //ÔÚ¼ô²Ã½á¹ûÖĞ»ñÈ¡µÆ¹â²¢½øĞĞ²ÎÊı»ñÈ¡
-            var lights = cullResults.visibleLights;
-
-            int dLightIndex = 0;
-            int pLightIndex = 0;
-            foreach (var light in lights)
-            {
-                //ÅĞ¶ÏµÆ¹âÀàĞÍ
-                if (light.lightType == LightType.Directional)
-                {
-                    //ÔÚÏŞ¶¨µÄµÆ¹âÊıÁ¿ÏÂ£¬»ñÈ¡²ÎÊı    
-                    if (dLightIndex < maxDirectionalLights)
-                    {
-                        //»ñÈ¡µÆ¹â²ÎÊı,Æ½ĞĞ¹â³¯Ïò¼´ÎªµÆ¹âZÖá·½Ïò¡£¾ØÕóµÚÒ»µ½ÈıÁĞ·Ö±ğÎªxyzÖáÏî£¬µÚËÄÁĞÎªÎ»ÖÃ¡£
-                        Vector4 lightpos = light.localToWorldMatrix.GetColumn(2);
-                        //Õâ±ß»ñÈ¡µÄµÆ¹âµÄfinalColorÊÇµÆ¹âÑÕÉ«³ËÉÏÇ¿¶ÈÖ®ºóµÄÖµ£¬Ò²ÕıºÃÊÇshaderĞèÒªµÄÖµ
-                        DLightColors[dLightIndex] = light.finalColor;
-                        DLightDirections[dLightIndex] = -lightpos;
-                        DLightDirections[dLightIndex].w = 0;//·½Ïò¹âµÄµÚËÄ¸öÖµ(WÖµ)Îª0£¬µãÎª1.
-                        dLightIndex++;
-                    }
-                }
-                else
-                {
-                    if (light.lightType != LightType.Point)
-                    {
-                        //ÆäËûÀàĞÍ¹âÔ´²¿·Ö
-                        continue;
-                    }
-                    else
-                    {
-                        if (pLightIndex < maxPointLights)
-                        {
-                            PLightColors[pLightIndex] = light.finalColor;
-                            //½«µã¹âÔ´µÄ¾àÀëÉèÖÃÈûµ½ÑÕÉ«µÄAÍ¨µÀ
-                            PLightColors[pLightIndex].w = light.range;
-                            //¾ØÕóµÚ4ÁĞÎªÎ»ÖÃ
-                            PLightPos[pLightIndex] = light.localToWorldMatrix.GetColumn(3);
-                            pLightIndex++;
-                        }
-                    }
-                }
-            }
-
-            //´«ÈëÏà»ú²ÎÊı¡£×¢ÒâÊÇÊÀ½ç¿Õ¼äÎ»ÖÃ¡£
-            Vector4 cameraPos = camera.transform.position;
-            commandBuffer.SetGlobalVector(_CameraPos, cameraPos);
-
-            //ÀûÓÃCommandBuffer½ø½«µÆ¹â²ÎÊı×é´«ÈëShader           
-            commandBuffer.SetGlobalVectorArray(D_LightColor, DLightColors);
-            commandBuffer.SetGlobalVectorArray(D_LightDir, DLightDirections);
-
-
-            commandBuffer.SetGlobalVectorArray(_PLightColor, PLightColors);
-            commandBuffer.SetGlobalVectorArray(_PLightPos, PLightPos);
-        }
-
-        void Setup()
-        {
-            sampleName = "Render camera =>" + camera.name;
-            commandBuffer.BeginSample(sampleName);
-            commandBuffer.name = sampleName;
-            //Èç¹û²»ÔÚ×îÇ°ÃæÉèÖÃÏà»ú£¬ÄÇÃ´ºóĞøµÄClearRenderTarget½«Ê¹ÓÃdraw GL£¨Ö´ĞĞÒ»´Î¿Õ»æÖÆ£©À´ÇåÀí£¬±È½ÏµÍĞ§£¬ĞèÒªºÄ·ÑÒ»´Îset passCall
-            //ÔÚ×îÇ°ÃæÉèÖÃÏà»ú²ÎÊıºó£¬£¬Ôò¿ÉÒÔÊ¹ÓÃÖ±½Ó clear(depth + stencil)£¬ÇåÀícameraµÄÉî¶È +Ä£°å
-            //ÉèÖÃäÖÈ¾Ïà¹ØÏà»ú²ÎÊı,°üº¬Ïà»úµÄ¸÷¸ö¾ØÕóºÍ¼ô²ÃÆ½ÃæµÈ
-            renderContext.SetupCameraProperties(camera);
-
-            //Çå³ıäÖÈ¾Ä¿±ê
-            //ÎŞÂÛÎÒÃÇ»æÖÆÊ²Ã´£¬×îÖÕ¶¼»áäÖÈ¾µ½Ïà»úµÄäÖÈ¾Ä¿±ê£¬Ä¬ÈÏÇé¿öÏÂÊÇÖ¡»º³åÇø£¬µ«Ò²¿ÉÄÜÊÇäÖÈ¾ÎÆÀí¡£ÉÏÒ»Ö¡µÄ»º³åÇø»òÕßÎÆÀí£¬²»»á×Ô¶¯Ê§Ğ§
-            //Ö®Ç°±»»æÖÆµ½¸ÃÄ¿±êµÄÈÎºÎÄÚÈİÈÔÈ»´æÔÚ£¬Õâ¿ÉÄÜ»á¸ÉÈÅÎÒÃÇÏÖÔÚäÖÈ¾µÄÍ¼Ïñ¡£
-            //ÎªÁË±£Ö¤ÕıÈ·µÄäÖÈ¾£¬ÎÒÃÇ±ØĞëÇå³ıäÖÈ¾Ä¿±êÒÔ°ÚÍÑÆä¾ÉÄÚÈİ¡£
-            //CommandBuffer.ClearRenderTargetÖÁÉÙĞèÒªÈı¸ö²ÎÊı¡£Ç°Á½¸öÖ¸Ê¾ÊÇ·ñÓ¦Çå³ıÉî¶ÈºÍÑÕÉ«Êı¾İ£¬ÕâÁ½Õß¶¼ÊÇÈç´Ë¡£µÚÈı¸ö²ÎÊıÊÇÓÃÓÚÇå³ıµÄÑÕÉ«
-            //2.ÉèÖÃäÖÈ¾Ä¿±ê£ºÊÇ·ñ±£ÁôÉî¶È¡¢±³¾°É«¡£
-            var flags = camera.clearFlags;
-            commandBuffer.ClearRenderTarget((flags & CameraClearFlags.Depth) != 0, (flags & CameraClearFlags.Color) != 0, camera.backgroundColor);
-
-
-            //Ã¿Ò»´Î commandBufferÌî³äÁË£¬±ØĞëÖ´ĞĞ£¬²ÅÓĞĞ§£¬²»ÊÇ¹âÖ´ĞĞClearRenderTarget¾Í¿ÉÒÔÁË
-            ExecuteBuffer();
-
-        }
-
-        void Submit()
-        {
-            commandBuffer.EndSample(sampleName);
-            //6.äÖÈ¾ÉÏÏÂÎÄÌá½»gpu
-            renderContext.Submit();
-        }
-    }
+public partial class CameraRenderer {
+
+	const string bufferName = "Render Camera";
+
+	static ShaderTagId
+		unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit"),
+		litShaderTagId = new ShaderTagId("CustomLit"),
+		SrpForwardTagId = new ShaderTagId("SrpForward"),
+		SrpTransTagId = new ShaderTagId("SrpTrans");
+
+	static int frameBufferId = Shader.PropertyToID("_CameraFrameBuffer");
+
+	//CommandBufferï¼Œæ˜¯æŒ‡ä»¤è®°å½•è¡¨ã€‚Unityä½¿ç”¨â€œå…ˆè®°å½•ï¼Œåæ‰§è¡Œâ€çš„ç­–ç•¥å®ç°æ¸²æŸ“ç®¡çº¿ï¼Œ
+	//å¥½æ¯”å»é¤é¦†åƒé¥­ï¼Œå¯èƒ½èŠ±äº†å¥½é•¿æ—¶é—´æ‰æŠŠèœç‚¹å®Œï¼Œç„¶åä¸€æ—¦æäº¤ç»™å¨æˆ¿ï¼Œä¼šä¸€æ¬¡æ€§æŠŠèœåšå¥½ã€‚
+	//Unityçš„å»¶è¿Ÿæ‰§è¡Œä½“ç°åœ¨CommandBufferå’ŒScriptableRenderContextçš„è®¾è®¡ä¸­ï¼Œè¿™ä¸¤ä¸ªå¯¹è±¡éƒ½å……å½“æˆ‘ä»¬çš„â€œèœå•â€ã€‚
+	//å°†éœ€è¦æ‰§è¡Œçš„æ‰§è¡Œè®°å½•åœ¨èœå•ä¸Šä»¥åï¼Œ
+	//å¯ä»¥ä½¿ç”¨ScriptableRenderContext.ExecuteCommandBufferå’ŒScriptableRenderContext.Submitæ¥æäº¤
+	//CommandBufferå’ŒScriptableRenderContextã€‚
+
+	//æˆ‘ä»¬ç”¨ä¸€ä¸ªç‹¬ç«‹çš„å‘½ä»¤ç¼“å†²åŒºæ¥ä¸ºé˜´å½±å·¥ä½œï¼Œæ‰€ä»¥æˆ‘ä»¬åœ¨å¸§è°ƒè¯•å™¨ä¸­çœ‹åˆ°é˜´å½±å’Œå¸¸è§„åœºæ™¯æ˜¯åœ¨ç‹¬ç«‹çš„åŒºåŸŸæ¸²æŸ“çš„ã€‚
+
+	//åƒç»˜åˆ¶å¤©ç©ºç›’è¿™æ ·çš„ä»»åŠ¡æˆ‘ä»¬å¯ä»¥é€šè¿‡ç‰¹æœ‰çš„æ–¹æ³•æ¥æ§åˆ¶ï¼Œä½†æ˜¯å…¶ä»–çš„å‘½ä»¤åªèƒ½é€šè¿‡å•ç‹¬çš„Command Bufferï¼ˆå‘½ä»¤ç¼“å†²åŒºï¼‰
+	//æˆ‘ä»¬ç”¨ä¸€ä¸ªç‹¬ç«‹çš„CommandBufferæ¥ä¸ºé˜´å½±å·¥ä½œï¼Œæ‰€ä»¥æˆ‘ä»¬åœ¨å¸§è°ƒè¯•å™¨ä¸­çœ‹åˆ°é˜´å½±å’Œå¸¸è§„åœºæ™¯æ˜¯åœ¨ç‹¬ç«‹çš„åŒºåŸŸæ¸²æŸ“çš„ã€‚
+	//CommandBuffersåœ¨scriptable rendering pipelineæ·»åŠ ä¹‹å‰å°±å·²ç»å­˜åœ¨ï¼Œæ‰€ä»¥å®ƒä¸æ˜¯å®éªŒæ€§çš„ï¼Œ
+	//ç°åœ¨æˆ‘ä»¬åœ¨ç»˜åˆ¶skyboxä¹‹å‰åˆ›å»ºä¸€ä¸ªcommandbufferå¯¹è±¡ã€‚
+	//æˆ‘ä»¬é€šè¿‡ExecuteCommandBuffeæ–¹æ³•è®©ä¸Šä¸‹æ–‡æ‰§è¡Œè¿™ä¸ªbufferï¼Œè¿™ä¸ªå‘½ä»¤ä¸ä¼šç«‹å³æ‰§è¡Œï¼Œä»–åªæ˜¯æŠŠå®ƒcopyåˆ°ä¸Šä¸‹æ–‡çš„å†…éƒ¨bufferä¸­ã€‚
+	CommandBuffer commandBuffer = new CommandBuffer {
+		name = bufferName
+	};
+
+	ScriptableRenderContext renderContext;
+
+	Camera camera;
+
+	CullingResults cullingResults;
+
+	Lighting lighting = new Lighting();
+
+	PostFXStack postFXStack = new PostFXStack();
+
+	bool useHDR;
+
+	public void Render (ScriptableRenderContext context, Camera camera, bool allowHDR,bool useDynamicBatching, bool useGPUInstancing,
+		bool useLightsPerObject,ShadowSettings shadowSettings, PostFXSettings postFXSettings) 
+	{
+		this.renderContext = context;
+		this.camera = camera;
+		Debug.LogError("11111");
+		PrepareBuffer();
+		PrepareForSceneWindow();
+		if (!Cull(shadowSettings.maxDistance)) 
+		{
+			Debug.LogError("æ²¡æœ‰å¯è§ç‰©ä½“");
+			return;
+		}
+		useHDR = allowHDR && camera.allowHDR;
+
+		//æˆ‘ä»¬å¯ä»¥ä½¿ç”¨å‘½ä»¤ç¼“å†²åŒºæ³¨å…¥åˆ†æå™¨æ ·æœ¬,å°†å‡ºç°åˆ†æå™¨å’Œå¸§è°ƒè¯•å™¨ã€‚ 
+		//è¿™æ˜¯é€šè¿‡è°ƒç”¨æ¥å®Œæˆçš„ BeginSample å’Œ EndSample åœ¨é€‚å½“çš„ç‚¹,è¿™æ˜¯å¼€å§‹ è®¾ç½® å’Œ æäº¤ åœ¨æˆ‘ä»¬çš„ä¾‹å­ä¸­ã€‚ 
+		//è¿™ä¸¤ç§æ–¹æ³•éƒ½å¿…é¡»æä¾›ç›¸åŒçš„æ ·å“åç§°,æˆ‘ä»¬å°†ä½¿ç”¨ç¼“å†²åŒºçš„åå­—ã€‚
+		commandBuffer.BeginSample(SampleName);
+		
+		//æ¸²æŸ“å‰ï¼Œæˆ‘ä»¬å…ˆæäº¤ä¸€æ¬¡ç©ºbufferåˆ°ä¸Šä¸‹æ–‡
+		//æ‰§è¡Œä¸€ä¸ªç©ºçš„command bufferä»€ä¹ˆéƒ½ä¸ä¼šåšï¼Œæ·»åŠ å®ƒæ˜¯ä¸ºäº†æ¸…ç©ºæ¸²æŸ“å¯¹è±¡ï¼Œé¿å…å—åˆ°ä¹‹å‰æ¸²æŸ“ç»“æœçš„å½±å“ã€‚
+		//è¿™å¯ä»¥é€šè¿‡å‘½ä»¤ç¼“å†²åŒºå®ç°ï¼Œä½†ä¸èƒ½ç›´æ¥é€šè¿‡ä¸Šä¸‹æ–‡å®ç°ã€‚
+		//ExecuteBuffer();
+
+        //å¦‚æœä¸åœ¨æœ€å‰é¢è®¾ç½®ç›¸æœºï¼Œé‚£ä¹ˆåç»­çš„ClearRenderTargetå°†ä½¿ç”¨draw GLï¼ˆæ‰§è¡Œä¸€æ¬¡ç©ºç»˜åˆ¶ï¼‰æ¥æ¸…ç†ï¼Œæ¯”è¾ƒä½æ•ˆï¼Œéœ€è¦è€—è´¹ä¸€æ¬¡set passCall
+		//æˆ‘ä»¬ä¹Ÿå¯ä»¥ä¸ä½¿ç”¨ä¹‹å‰çš„ç©ºbufferæäº¤äº†
+
+        //åœ¨æœ€å‰é¢è®¾ç½®ç›¸æœºå‚æ•°åï¼Œï¼Œåˆ™å¯ä»¥ä½¿ç”¨ç›´æ¥ clear(depth + stencil)ï¼Œæ¸…ç†cameraçš„æ·±åº¦ +æ¨¡æ¿
+        //è®¾ç½®æ¸²æŸ“ç›¸å…³ç›¸æœºå‚æ•°,åŒ…å«ç›¸æœºçš„å„ä¸ªçŸ©é˜µå’Œå‰ªè£å¹³é¢ç­‰
+        renderContext.SetupCameraProperties(camera);
+
+
+
+        //è®¾ç½®å…‰ç…§å’Œé˜´å½±è´´å›¾
+        lighting.Setup(context, cullingResults, shadowSettings, useLightsPerObject);
+		//åå¤„ç†
+		postFXStack.Setup(context, camera, postFXSettings, useHDR);
+
+		commandBuffer.EndSample(SampleName);
+
+		//è®¾ç½®ä¸Šä¸‹æ–‡å’Œbufferã€‚æ¸…ç©º
+		Setup();
+		//ç»˜åˆ¶å¯è§å‡ ä½•ä½“
+		DrawVisibleGeometry(useDynamicBatching, useGPUInstancing, useLightsPerObject);
+		//ç»˜åˆ¶é”™è¯¯ç€è‰²å™¨
+		DrawUnsupportedShaders();
+		DrawGizmosBeforeFX();
+		if (postFXStack.IsActive) 
+		{
+			postFXStack.Render(frameBufferId);
+		}
+		DrawGizmosAfterFX();
+		Cleanup();
+		//çœŸæ­£æ‰§è¡Œæ¸²æŸ“å†…å®¹
+		Submit();
+	}
+	//å‰”é™¤ï¼šæ‹¿åˆ°åœºæ™¯ä¸­çš„æ‰€æœ‰æ¸²æŸ“å™¨ï¼Œç„¶åå‰”é™¤é‚£äº›åœ¨æ‘„åƒæœºè§†é”¥èŒƒå›´ä¹‹å¤–çš„æ¸²æŸ“å™¨(é€šå¸¸æ˜¯ä¸€ä¸ªMeshRendererç»„ä»¶)ã€‚
+	bool Cull (float maxShadowDistance)
+    {   
+		//æ¸²æŸ“å™¨ï¼šå®ƒæ˜¯é™„ç€åœ¨æ¸¸æˆå¯¹è±¡ä¸Šçš„ç»„ä»¶ï¼Œå¯å°†å®ƒä»¬è½¬å˜ä¸ºå¯ä»¥æ¸²æŸ“çš„ä¸œè¥¿ã€‚é€šå¸¸æ˜¯ä¸€ä¸ªMeshRendererç»„ä»¶ã€‚
+        //é¦–å…ˆåˆ¤æ–­ç›¸æœºæ˜¯å¦æ”¯æŒæ¸²æŸ“
+        if (camera.TryGetCullingParameters(out ScriptableCullingParameters cullParam)) 
+		{
+			//   cullParam.isOrthographic = false;
+			cullParam.shadowDistance = Mathf.Min(maxShadowDistance, camera.farClipPlane);
+            //TODOï¼šé¿å…æ²¡æœ‰ä»»ä½•å¯æ¸²æŸ“çš„ç‰©ä½“æ—¶ï¼Œå¾€ä¸‹æ¸²æŸ“
+            //refoutç”¨ä½œä¼˜åŒ–ï¼Œä»¥é˜²æ­¢ä¼ é€’ç»“æ„çš„å‰¯æœ¬ï¼Œè¯¥å‰¯æœ¬ç›¸å½“å¤§ã€‚cullParamæ˜¯ä¸€ä¸ªç»“æ„è€Œä¸æ˜¯ä¸€ä¸ªå¯¹è±¡æ˜¯å¦ä¸€ç§ä¼˜åŒ–ï¼Œä»¥é˜²æ­¢å†…å­˜åˆ†é…ã€‚
+            cullingResults = renderContext.Cull(ref cullParam);		
+			return true;
+		}
+		return false;
+	}
+
+	void Setup () 
+	{
+		//è®¾ç½®æ¸²æŸ“ç›¸å…³ç›¸æœºå‚æ•°,åŒ…å«ç›¸æœºçš„å„ä¸ªçŸ©é˜µå’Œå‰ªè£å¹³é¢ç­‰
+		//ä¸ºäº†æ¸²æŸ“å¤©ç©ºç›’å’Œæ•´ä¸ªåœºæ™¯ï¼Œæˆ‘ä»¬å¿…é¡»è¦è®¾ç½®view-projectionçŸ©é˜µï¼Œ
+		//è¿™ä¸ªå˜æ¢çŸ©é˜µå°†æ‘„åƒæœºçš„ä½ç½®å’Œæ–¹å‘(è§†å›¾çŸ©é˜µ)ä¸æ‘„åƒæœºçš„é€è§†æˆ–æ­£æŠ•å½±(æŠ•å½±çŸ©é˜µ)ç›¸ç»“åˆã€‚
+		//å¯ä»¥åœ¨frame debuggerä¸­çœ‹åˆ°è¿™ä¸ªçŸ©é˜µunity_MatrixVP. æ˜¯shaderä¸­çš„ä¸€ä¸ªå±æ€§ã€‚
+		//æ­¤æ—¶ï¼Œunity_MatrixVPçŸ©é˜µéƒ½æ˜¯ä¸€æ ·çš„ï¼Œæˆ‘ä»¬é€šè¿‡SetupCameraPropertiesè¿™ä¸ªæ–¹æ³•æ¥ä¼ é€’æ‘„åƒæœºçš„å±æ€§ç»™ä¸Šä¸‹æ–‡ï¼Œ
+		//renderContext.SetupCameraProperties(camera);
+
+
+
+
+		//æ ¹æ®flagsæ¥æ¸…ç†
+		CameraClearFlags flags = camera.clearFlags;
+
+		if (postFXStack.IsActive) 
+		{
+			if (flags > CameraClearFlags.Color) 
+			{
+				flags = CameraClearFlags.Color;
+			}
+			commandBuffer.GetTemporaryRT(frameBufferId, camera.pixelWidth, camera.pixelHeight,
+				32, FilterMode.Bilinear, useHDR ?RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
+			commandBuffer.SetRenderTarget(frameBufferId,RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+		}
+
+		//æˆ‘ä»¬å¯ä»¥é€šè¿‡è°ƒç”¨ClearRenderTargetæ–¹æ³•æ·»åŠ ä¸€ä¸ªä¸€ä¸ªæ¸…ç†å‘½ä»¤ã€‚
+		//ç¬¬ä¸€ä¸ªå‚æ•°è¡¨ç¤ºæ·±åº¦ä¿¡æ¯æ˜¯å¦æ¸…é™¤ï¼Œç¬¬äºŒä¸ªå‚æ•°è¡¨ç¤ºcolorä¿¡æ¯æ˜¯å¦æ¸…é™¤ï¼Œç¬¬ä¸‰ä¸ªå‚æ•°æ˜¯æ¸…ç†çš„colorå€¼ï¼Œå¦‚æœä½¿ç”¨ã€‚
+		//ä¾‹å¦‚ï¼Œè®©æˆ‘ä»¬æ¸…é™¤æ·±åº¦æ•°æ®ï¼Œå¿½ç•¥é¢œè‰²æ•°æ®ï¼Œä½¿ç”¨Color.clear ä½œä¸ºæ¸…é™¤é¢œè‰²ã€‚
+		commandBuffer.ClearRenderTarget(
+			flags <= CameraClearFlags.Depth,
+			flags == CameraClearFlags.Color,
+			flags == CameraClearFlags.Color ?camera.backgroundColor.linear : Color.clear
+		);
+		commandBuffer.BeginSample(SampleName);
+		//ç¬¬äºŒæ¬¡æäº¤buffer
+		ExecuteBuffer();
+	}
+
+	void Cleanup () {
+		lighting.Cleanup();
+		if (postFXStack.IsActive) {
+			commandBuffer.ReleaseTemporaryRT(frameBufferId);
+		}
+	}
+
+	void Submit () {
+		commandBuffer.EndSample(SampleName);
+		ExecuteBuffer();
+		renderContext.Submit();
+	}
+
+	void ExecuteBuffer () {
+		renderContext.ExecuteCommandBuffer(commandBuffer);
+		//å‘½ä»¤ç¼“å†²åŒºä¼šåœ¨unityçš„åŸç”Ÿå±‚å¼€è¾Ÿç©ºé—´æ¥å»å­˜å‚¨å‘½ä»¤ã€‚æ‰€ä»¥å¦‚æœæˆ‘ä»¬ä¸å†éœ€è¦è¿™äº›èµ„æºï¼Œæˆ‘ä»¬æœ€å¥½é©¬ä¸Šé‡Šæ”¾å®ƒã€‚
+		//æˆ‘ä»¬å¯ä»¥åœ¨è°ƒç”¨ExecuteCommandBufferæ–¹æ³•ä¹‹åè°ƒç”¨Releaseæ–¹æ³•æ¥é‡Šæ”¾å®ƒã€‚
+		//buffer.Release();
+		commandBuffer.Clear();
+		
+	}
+
+	void DrawVisibleGeometry (bool useDynamicBatching, bool useGPUInstancing, bool useLightsPerObject) 
+	{
+		PerObjectData lightsPerObjectFlags = useLightsPerObject ?PerObjectData.LightData | PerObjectData.LightIndices :PerObjectData.None;
+
+		var sortingSettings = new SortingSettings(camera) {
+			criteria = SortingCriteria.CommonOpaque
+		};
+
+		//å†³å®šä½¿ç”¨ä½•ç§light modeï¼Œå¯¹åº”shaderçš„passçš„tagä¸­çš„LightMode
+
+		//1.ç»˜åˆ¶SRPDefaultUnlit
+
+		//ç›¸æœºç”¨äºè®¾ç½®æ’åºå’Œå‰”é™¤å±‚ï¼Œè€ŒDrawingSettingsæ§åˆ¶ä½¿ç”¨å“ªä¸ªç€è‰²å™¨Passè¿›è¡Œæ¸²æŸ“ã€‚
+		DrawingSettings drawingSettings = new DrawingSettings(unlitShaderTagId, sortingSettings) 
+		{
+			enableDynamicBatching = useDynamicBatching,
+			enableInstancing = useGPUInstancing,
+			perObjectData =
+				PerObjectData.ReflectionProbes |
+				PerObjectData.Lightmaps | PerObjectData.ShadowMask |
+				PerObjectData.LightProbe | PerObjectData.OcclusionProbe |
+				PerObjectData.LightProbeProxyVolume |
+				PerObjectData.OcclusionProbeProxyVolume |
+				lightsPerObjectFlags
+		};
+		drawingSettings.SetShaderPassName(1, litShaderTagId);
+		drawingSettings.SetShaderPassName(2, SrpForwardTagId);
+		drawingSettings.SetShaderPassName(3, SrpTransTagId);
+
+		//è¿‡æ»¤ï¼šå†³å®šä½¿ç”¨å“ªäº›æ¸²æŸ“å™¨
+		// FilteringSettings filtSet = new FilteringSettings(RenderQueueRange.opaque, -1);
+		//FilteringSettings filtSet = new FilteringSettings(RenderQueueRange.all);
+
+
+
+		//å†³å®šä½¿ç”¨ä½•ç§æ¸²æŸ“æ’åºé¡ºåº å¯¹åº”shaderé‡Œçš„   Tags{ "Queue" = "Geometry" } è¿™å±æ€§(ä¸æ˜¯è¿™ä¸ªå•ä¸€å±æ€§)
+		//opaqueæ¶µç›–äº†ä»0åˆ°2500ï¼ˆåŒ…æ‹¬2500ï¼‰ä¹‹é—´çš„æ¸²æŸ“é˜Ÿåˆ—ã€‚
+		FilteringSettings filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
+
+		//2.ç»˜åˆ¶CustomLit
+		renderContext.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+
+
+		//3.ç»˜åˆ¶å¤©ç©ºçƒ,åœ¨ä¸é€æ˜ç‰©ä½“ä¹‹åç»˜åˆ¶ã€‚early-zé¿å…ä¸å¿…è¦çš„overdrawã€‚
+		//ç”±æ‘„åƒæœºçš„Clear flagsæ§åˆ¶æ˜¯å¦çœŸçš„ç»˜åˆ¶Skyboxã€‚ 
+		renderContext.DrawSkybox(camera);
+
+		//4.ç»˜åˆ¶é€æ˜ç‰©ä½“
+		sortingSettings.criteria = SortingCriteria.CommonTransparent;
+		drawingSettings.sortingSettings = sortingSettings;
+		filteringSettings.renderQueueRange = RenderQueueRange.transparent;
+
+		renderContext.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+	}
 }
