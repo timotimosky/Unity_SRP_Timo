@@ -14,8 +14,8 @@
 	
 	SubShader {
 		HLSLINCLUDE
-		#include "../ShaderLibrary/Common.hlsl"
-		#include "UnlitInput.hlsl"
+		#include "ShaderLibrary/Common.hlsl"
+		#include "ShaderLibrary/UnlitInput.hlsl"
 		ENDHLSL
 
 		Pass {

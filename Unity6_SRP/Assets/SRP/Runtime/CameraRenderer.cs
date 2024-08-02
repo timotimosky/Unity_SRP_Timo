@@ -1,16 +1,25 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.UIElements;
 
 public partial class CameraRenderer {
 
 	const string bufferName = "Render Camera";
 
+#if UNITY_EDITOR
+	static ShaderTagId[] legacyShaderTagIds = {
+		//new ShaderTagId("Always"),
+		new ShaderTagId("ForwardBase"),
+        new ShaderTagId("PrepassBase"),
+        new ShaderTagId("Vertex"),
+        new ShaderTagId("VertexLMRGBM"),
+        new ShaderTagId("VertexLM")
+    };
+#endif
 	static ShaderTagId
-		unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit"),
-		litShaderTagId = new ShaderTagId("CustomLit"),
+		unlitShaderTagId = new ShaderTagId("SrpUnlit"),
+		litShaderTagId = new ShaderTagId("SrpLit"),
 		SrpForwardTagId = new ShaderTagId("SrpForward"),
-		SrpTransTagId = new ShaderTagId("SrpTrans");
+		SrpTransTagId = new ShaderTagId("SrpTransparent");
 
 	static int frameBufferId = Shader.PropertyToID("_CameraFrameBuffer");
 
@@ -75,14 +84,12 @@ public partial class CameraRenderer {
 
         //在最前面设置相机参数后，，则可以使用直接 clear(depth + stencil)，清理camera的深度 +模板
         //设置渲染相关相机参数,包含相机的各个矩阵和剪裁平面等
-        renderContext.SetupCameraProperties(camera);
-
-
+       // renderContext.SetupCameraProperties(camera);
 
         //设置光照和阴影贴图
-        lighting.Setup(context, cullingResults, shadowSettings, useLightsPerObject);
+        //lighting.Setup(context, cullingResults, shadowSettings, useLightsPerObject);
 		//后处理
-		postFXStack.Setup(context, camera, postFXSettings, useHDR);
+		//postFXStack.Setup(context, camera, postFXSettings, useHDR);
 
 		commandBuffer.EndSample(SampleName);
 
@@ -126,24 +133,21 @@ public partial class CameraRenderer {
 		//这个变换矩阵将摄像机的位置和方向(视图矩阵)与摄像机的透视或正投影(投影矩阵)相结合。
 		//可以在frame debugger中看到这个矩阵unity_MatrixVP. 是shader中的一个属性。
 		//此时，unity_MatrixVP矩阵都是一样的，我们通过SetupCameraProperties这个方法来传递摄像机的属性给上下文，
-		//renderContext.SetupCameraProperties(camera);
-
-
-
+		renderContext.SetupCameraProperties(camera);
 
 		//根据flags来清理
 		CameraClearFlags flags = camera.clearFlags;
 
-		if (postFXStack.IsActive) 
-		{
-			if (flags > CameraClearFlags.Color) 
-			{
-				flags = CameraClearFlags.Color;
-			}
-			commandBuffer.GetTemporaryRT(frameBufferId, camera.pixelWidth, camera.pixelHeight,
-				32, FilterMode.Bilinear, useHDR ?RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
-			commandBuffer.SetRenderTarget(frameBufferId,RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-		}
+		//if (postFXStack.IsActive)
+		//{
+		//	if (flags > CameraClearFlags.Color)
+		//	{
+		//		flags = CameraClearFlags.Color;
+		//	}
+		//	commandBuffer.GetTemporaryRT(frameBufferId, camera.pixelWidth, camera.pixelHeight,
+		//		32, FilterMode.Bilinear, useHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
+		//	commandBuffer.SetRenderTarget(frameBufferId, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+		//}
 
 		//我们可以通过调用ClearRenderTarget方法添加一个一个清理命令。
 		//第一个参数表示深度信息是否清除，第二个参数表示color信息是否清除，第三个参数是清理的color值，如果使用。
@@ -151,9 +155,12 @@ public partial class CameraRenderer {
 		commandBuffer.ClearRenderTarget(
 			flags <= CameraClearFlags.Depth,
 			flags == CameraClearFlags.Color,
-			flags == CameraClearFlags.Color ?camera.backgroundColor.linear : Color.clear
+			flags == CameraClearFlags.Color ? camera.backgroundColor.linear : Color.clear
 		);
-		commandBuffer.BeginSample(SampleName);
+
+		//commandBuffer.ClearRenderTarget((flags & CameraClearFlags.Depth) != 0, (flags & CameraClearFlags.Color) != 0, camera.backgroundColor);
+
+        commandBuffer.BeginSample(SampleName);
 		//第二次提交buffer
 		ExecuteBuffer();
 	}
@@ -184,7 +191,8 @@ public partial class CameraRenderer {
 	}
 
 	void ExecuteBuffer () {
-		renderContext.ExecuteCommandBuffer(commandBuffer);
+        //3.copy CommandBuffer指令，填充到renderContext中的buffer
+        renderContext.ExecuteCommandBuffer(commandBuffer);
         //命令缓冲区会在unity的原生层开辟空间来去存储命令。所以如果我们不再需要这些资源，我们最好马上释放它。
         //我们可以在调用ExecuteCommandBuffer方法之后调用Release方法来释放它。
         //commandBuffer.Release();
@@ -196,16 +204,21 @@ public partial class CameraRenderer {
 	{
 		PerObjectData lightsPerObjectFlags = useLightsPerObject ?PerObjectData.LightData | PerObjectData.LightIndices :PerObjectData.None;
 
-		var sortingSettings = new SortingSettings(camera) {
+
+        //确定是应用正交排序还是基于距离的排序
+        // CommonOpaque排序时，大部分时候，对象从前到后绘制，这对于不透明的对象来说是理想的选择：
+        // 如果某物最终被绘制在其他物后面，则可以跳过其隐藏的片段，从而加快渲染速度。
+        // 常见的不透明排序选项还考虑了一些其他条件，包括渲染队列和材质。
+        SortingSettings sortingSettings = new SortingSettings(camera) {
 			criteria = SortingCriteria.CommonOpaque
 		};
 
-		//决定使用何种light mode，对应shader的pass的tag中的LightMode
+        //决定使用何种light mode，对应shader的pass的tag中的LightMode
 
-		//1.绘制SRPDefaultUnlit
+        //1.绘制SRPDefaultUnlit
 
-		//相机用于设置排序和剔除层，而DrawingSettings控制使用哪个着色器Pass进行渲染。
-		DrawingSettings drawingSettings = new DrawingSettings(unlitShaderTagId, sortingSettings) 
+        //相机用于设置排序和剔除层，而DrawingSettings控制使用哪个着色器Pass进行渲染。
+        DrawingSettings drawingSettings = new DrawingSettings(unlitShaderTagId, sortingSettings) 
 		{
 			enableDynamicBatching = useDynamicBatching,
 			enableInstancing = useGPUInstancing,
@@ -221,23 +234,24 @@ public partial class CameraRenderer {
 		drawingSettings.SetShaderPassName(2, SrpForwardTagId);
 		drawingSettings.SetShaderPassName(3, SrpTransTagId);
 
-		//过滤：决定使用哪些渲染器
-		// FilteringSettings filtSet = new FilteringSettings(RenderQueueRange.opaque, -1);
-		//FilteringSettings filtSet = new FilteringSettings(RenderQueueRange.all);
-
-
-
-		//决定使用何种渲染排序顺序 对应shader里的   Tags{ "Queue" = "Geometry" } 这属性(不是这个单一属性)
+		//过滤：决定使用何种渲染排序顺序 对应shader里的   Tags{ "Queue" = "Geometry" } 这属性(不是这个单一属性)
 		//opaque涵盖了从0到2500（包括2500）之间的渲染队列。
 		FilteringSettings filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
+        //FilteringSettings filtSet = new FilteringSettings(RenderQueueRange.opaque, -1);
+        //filtSet.renderQueueRange = RenderQueueRange.opaque;
+        //filtSet.layerMask = -1;   
 
-		//2.绘制CustomLit
-		renderContext.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+        //2.绘制CustomLit
+        renderContext.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
 
+        //3.绘制天空球,在不透明物体之后绘制。early-z避免不必要的overdraw。
+        //由摄像机的Clear flags控制是否真的绘制Skybox
+        
+        
+      //  RendererList cameraRendererList = ScriptableRenderContext.CreateSkyboxRendererList(camera,null,null,null,null);
+		//CommandBuffer.DrawRendererList(cameraRendererList);
 
-		//3.绘制天空球,在不透明物体之后绘制。early-z避免不必要的overdraw。
-		//由摄像机的Clear flags控制是否真的绘制Skybox。 
-		renderContext.DrawSkybox(camera);
+        renderContext.DrawSkybox(camera);
 
 		//4.绘制透明物体
 		sortingSettings.criteria = SortingCriteria.CommonTransparent;

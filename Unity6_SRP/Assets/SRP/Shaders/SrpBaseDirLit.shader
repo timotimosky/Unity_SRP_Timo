@@ -10,9 +10,9 @@
 
 		HLSLINCLUDE
 
-#include "../ShaderLibrary/Common.hlsl"
+//#include "ShaderLibrary/Common.hlsl"
 //#include "../ShaderLibrary/Shadows.hlsl"
-#include "../ShaderLibrary/Light.hlsl"
+#include "ShaderLibrary/Light.hlsl"
 //#include "LitInput.hlsl"
 //#include "UnityInput.hlsl"
 
@@ -126,7 +126,7 @@
 			{
 				//Unity的默认光照模型没有BaseLit这个类型的，默认应该是Always,因为默认管线中的光照必须判断相关的宏定义来获取相关参数。
 				//但我们自己写SRP可以随便起名字。上一节的Unlit也是我们自己起的
-				Tags{ "LightMode" = "SrpForward" }
+				Tags{ "LightMode" = "UniversalForward" }
 
 				HLSLPROGRAM
 				#pragma vertex vert

@@ -17,11 +17,11 @@
 //#include"packages/packages.unity.cn/com.unity.render - pipelines.core@8.2.0/ShaderLibrary/SpaceTransforms.hlsl"
 			//#include"Packages/com.unity.render-pipelines.core/ShaderLibrary/SpaceTransforms.hlsl"
 			//#include "PackageCache\com.unity.render-pipelines.core@7.1.8\ShaderLibrary"
-//#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
 //#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/SpaceTransforms.hlsl"
-#include "../ShaderLibrary/Common.hlsl"
-#include "LitInput.hlsl"
-#include "UnityInput.hlsl"
+//#include "ShaderLibrary/Common.hlsl"
+#include "ShaderLibrary/LitInput.hlsl"
+#include "ShaderLibrary/UnityInput.hlsl"
 			//要计算相机方向，还需要物体的世界空间，所以顶点输出结构体中，还需要增加点世界空间位置的输出参数：
 			half4 _CameraPos;
 			half _TransAlpha;

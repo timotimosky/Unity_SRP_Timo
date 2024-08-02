@@ -41,8 +41,8 @@
 	
 	SubShader {
 		HLSLINCLUDE
-		#include "../ShaderLibrary/Common.hlsl"
-		#include "LitInput.hlsl"
+		#include "ShaderLibrary/Common.hlsl"
+		#include "ShaderLibrary/LitInput.hlsl"
 		ENDHLSL
 
 		Pass {
@@ -71,7 +71,7 @@
 			#pragma multi_compile_instancing
 			#pragma vertex LitPassVertex
 			#pragma fragment LitPassFragment
-			#include "LitPass.hlsl"
+			#include "ShaderLibrary/LitPass.hlsl"
 			ENDHLSL
 		}
 
@@ -89,7 +89,7 @@
 			#pragma multi_compile_instancing
 			#pragma vertex ShadowCasterPassVertex
 			#pragma fragment ShadowCasterPassFragment
-			#include "ShadowCasterPass.hlsl"
+			#include "ShaderLibrary/ShadowCasterPass.hlsl"
 			ENDHLSL
 		}
 
@@ -104,7 +104,7 @@
 			#pragma target 3.5
 			#pragma vertex MetaPassVertex
 			#pragma fragment MetaPassFragment
-			#include "MetaPass.hlsl"
+			#include "ShaderLibrary/MetaPass.hlsl"
 			ENDHLSL
 		}
 	}

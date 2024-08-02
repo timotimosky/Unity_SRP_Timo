@@ -85,10 +85,7 @@
 			LOD 100
 			Pass
 		{
-			//这边注意一下，Unity的默认光照模型中，是没有BaseLit这个类型的。在过去的默认管线中这么
-			//写肯定不行，因为默认管线中的光照必须判断相关的宏定义来获取相关参数。但这边我们自己写
-			//SRP，所以，这边其实可以随便起名字的。上一节的Unlit也是，默认应该是Always
-			Tags{ "LightMode" = "SrpBaseLit" }
+			Tags{ "LightMode" = "SrpUnlit" }
 
 			HLSLPROGRAM
 			#pragma vertex vert
