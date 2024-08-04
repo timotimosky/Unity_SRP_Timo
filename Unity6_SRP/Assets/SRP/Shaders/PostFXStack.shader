@@ -6,8 +6,8 @@
 		ZWrite Off
 		
 		HLSLINCLUDE
-		
-		//#include "UnityCG.cginc"
+		#include"Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+		#include"Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl" 
 		//#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
 		//#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Filtering.hlsl"
 
@@ -17,7 +17,6 @@
 // #include "PackageCache/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
 // #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Filtering.hlsl"
 
-		#include "ShaderLibrary/Common.hlsl"
 		#include "ShaderLibrary/PostFXStackPasses.hlsl"
 		ENDHLSL
 		

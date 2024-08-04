@@ -89,7 +89,7 @@ public partial class CameraRenderer {
         //设置光照和阴影贴图
         //lighting.Setup(context, cullingResults, shadowSettings, useLightsPerObject);
 		//后处理
-		//postFXStack.Setup(context, camera, postFXSettings, useHDR);
+		postFXStack.Setup(context, camera, postFXSettings, useHDR);
 
 		commandBuffer.EndSample(SampleName);
 
@@ -100,10 +100,10 @@ public partial class CameraRenderer {
 		//绘制错误着色器
 		DrawUnsupportedShaders();
 		DrawGizmosBeforeFX();
-		//if (postFXStack.IsActive) 
-		//{
-		//	postFXStack.Render(frameBufferId);
-		//}
+		if (postFXStack.IsActive)
+		{
+			postFXStack.Render(frameBufferId);
+		}
 		DrawGizmosAfterFX();
 		Cleanup();
 		//真正执行渲染内容

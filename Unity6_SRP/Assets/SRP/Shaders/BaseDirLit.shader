@@ -1,4 +1,4 @@
-﻿Shader "SRPStudy/BaseLit"
+﻿Shader "SRP/BaseLit"
 {
 	Properties
 	{
@@ -9,7 +9,6 @@
 
 	HLSLINCLUDE
 
-	//#include "UnityCG.cginc"
 	#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"	 
 	//要计算相机方向，还需要物体的世界空间，所以顶点输出结构体中，还需要增加点世界空间位置的输出参数：
 	half4 _CameraPos;
@@ -56,16 +55,8 @@
 	v2f vert(a2v v)
 	{
 		v2f o = (v2f)0;
-		//UNITY_INITIALIZE_OUTPUT(v2f, o);
 		o.uv = v.uv;
-		//这边仍然使用的Unity的内置矩阵。目前来看还可以用。如果以后不行了，可以考虑
-		//管线自己往里面传矩阵。第一个是MVP矩阵。管线里面传camera.projectMatrix*
-		//camera.worldToCameraMatrix之后，再传入一个物体的localToWorldMatrix即可。
-		//法线转换可以根据是否统一缩放来进行转换，可以参考目前unitycg.cginc中相关
-		//代码，传入M矩阵即可。
-		//o.position = UnityObjectToClipPos(v.position);	
 		o.position = TransformObjectToHClip(v.position.xyz);	
-		//o.normal = UnityObjectToWorldNormal(v.normal);
 		o.normal = TransformObjectToWorldNormal(v.normal);
 		return o;
 	}
