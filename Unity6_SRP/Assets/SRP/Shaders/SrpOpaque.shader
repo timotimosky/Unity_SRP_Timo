@@ -50,6 +50,7 @@
 		float3 worldPos : TEXCOORD1;
 		//法线传入像素管线计算像素光照
 		float3 normal : NORMAL;
+		float4 shadowCoord: TEXCOORD2;
 	};
 
 	v2f vert(a2v v)
@@ -58,6 +59,8 @@
 		o.uv = v.uv;
 		o.position = TransformObjectToHClip(v.position.xyz);	
 		o.normal = TransformObjectToWorldNormal(v.normal);
+		
+		o.worldPos =v.position;
 		return o;
 	}
 
@@ -117,6 +120,12 @@
 //2、点光源的灯光强弱除了与灯光本身的颜色、强度相关之外，还与点光源与被照射物体之间的距离和点光源的自身照射范围(这是一个非基于物理的引入参数，
 //方便进行灯光裁剪以及方便美术控制相关效果)相关。
 
+
+			//ShadowCaster
+			float4  shadowCoord = TransformWorldToShadowCoord(i.worldPos);
+			Light mainLight = GetMainLight(shadowCoord);
+			half shadow = MainLightRealtimeShadow(shadowCoord);
+			fragColor = float4(fragColor.rgb *  shadow,1);
 		return fragColor;
 	}
 
@@ -130,6 +139,9 @@
 		{
 			Tags { "LightMode" = "SrpLit" }
 			HLSLPROGRAM
+			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+#pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
 			#pragma vertex vert
 			#pragma fragment frag
 			ENDHLSL
