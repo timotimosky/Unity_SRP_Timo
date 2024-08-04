@@ -1,7 +1,8 @@
 ﻿#ifndef CUSTOM_POST_FX_PASSES_INCLUDED
 #define CUSTOM_POST_FX_PASSES_INCLUDED
 
-#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Filtering.hlsl"
 
 TEXTURE2D(_PostFXSource);

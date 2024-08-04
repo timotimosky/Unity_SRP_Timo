@@ -10,25 +10,6 @@ public partial class CustomRenderPipeline {
 	partial void InitializeForEditor ();
 
 #if UNITY_EDITOR
-
-
-	//[MenuItem("SRP/Create/Render Pipeline/Pipeline Asset")]
-	//static void CreateKata01Pipeline()
-	//{
-	//	ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, CreateInstance<CreatePipelineAsset>(),"Timo Pipeline.asset", null, null);
-	//}
-
-	class CreatePipelineAsset : EndNameEditAction
-	{
-		public override void Action(int instanceId, string pathName, string resourceFile)
-		{
-			var instance = CreateInstance<CustomRenderPipelineAsset>();
-			AssetDatabase.CreateAsset(instance, pathName);
-		}
-	}
-
-
-
 	partial void InitializeForEditor () {
 		Lightmapping.SetDelegate(lightsDelegate);
 	}

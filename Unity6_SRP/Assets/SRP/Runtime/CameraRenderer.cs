@@ -84,7 +84,7 @@ public partial class CameraRenderer {
 
         //在最前面设置相机参数后，，则可以使用直接 clear(depth + stencil)，清理camera的深度 +模板
         //设置渲染相关相机参数,包含相机的各个矩阵和剪裁平面等
-       // renderContext.SetupCameraProperties(camera);
+        renderContext.SetupCameraProperties(camera);
 
         //设置光照和阴影贴图
         //lighting.Setup(context, cullingResults, shadowSettings, useLightsPerObject);
@@ -100,10 +100,10 @@ public partial class CameraRenderer {
 		//绘制错误着色器
 		DrawUnsupportedShaders();
 		DrawGizmosBeforeFX();
-		if (postFXStack.IsActive) 
-		{
-			postFXStack.Render(frameBufferId);
-		}
+		//if (postFXStack.IsActive) 
+		//{
+		//	postFXStack.Render(frameBufferId);
+		//}
 		DrawGizmosAfterFX();
 		Cleanup();
 		//真正执行渲染内容
@@ -133,21 +133,21 @@ public partial class CameraRenderer {
 		//这个变换矩阵将摄像机的位置和方向(视图矩阵)与摄像机的透视或正投影(投影矩阵)相结合。
 		//可以在frame debugger中看到这个矩阵unity_MatrixVP. 是shader中的一个属性。
 		//此时，unity_MatrixVP矩阵都是一样的，我们通过SetupCameraProperties这个方法来传递摄像机的属性给上下文，
-		renderContext.SetupCameraProperties(camera);
+	//	renderContext.SetupCameraProperties(camera);
 
 		//根据flags来清理
 		CameraClearFlags flags = camera.clearFlags;
 
-		//if (postFXStack.IsActive)
-		//{
-		//	if (flags > CameraClearFlags.Color)
-		//	{
-		//		flags = CameraClearFlags.Color;
-		//	}
-		//	commandBuffer.GetTemporaryRT(frameBufferId, camera.pixelWidth, camera.pixelHeight,
-		//		32, FilterMode.Bilinear, useHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
-		//	commandBuffer.SetRenderTarget(frameBufferId, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-		//}
+		if (postFXStack.IsActive)
+		{
+			if (flags > CameraClearFlags.Color)
+			{
+				flags = CameraClearFlags.Color;
+			}
+			commandBuffer.GetTemporaryRT(frameBufferId, camera.pixelWidth, camera.pixelHeight,
+				32, FilterMode.Bilinear, useHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
+			commandBuffer.SetRenderTarget(frameBufferId, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+		}
 
 		//我们可以通过调用ClearRenderTarget方法添加一个一个清理命令。
 		//第一个参数表示深度信息是否清除，第二个参数表示color信息是否清除，第三个参数是清理的color值，如果使用。

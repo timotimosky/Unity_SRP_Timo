@@ -29,9 +29,7 @@ public class CustomRenderPipelineAsset : RenderPipelineAsset {
     [MenuItem("SRP/Create/Render Pipeline Asset")]
     static void CreateSrpPipeline()
     {
-        ProjectWindowUtil.StartNameEditingIfProjectWindowExists(
-            0, CreateInstance<CreateSrpPipelineAsset>(),
-            "Timo Srp Pipeline Asset.asset", null, null);
+        ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, CreateInstance<CreateSrpPipelineAsset>(),  "Timo Srp Pipeline Asset.asset", null, null);
     }
 
     protected override RenderPipeline CreatePipeline () {
