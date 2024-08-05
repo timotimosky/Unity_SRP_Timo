@@ -11,10 +11,10 @@
 
 	#include"Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
 	#include"Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl" 
-	//定义最多4盏点光
 	#define MAX_POINT_LIGHTS 4
-	half4 _PLightPos[MAX_POINT_LIGHTS];
-	real4 _PLightColor[MAX_POINT_LIGHTS];
+	int _DirectionalLightCount;
+	half4  _DirectionalLightDirections[MAX_POINT_LIGHTS];
+	real4  _DirectionalLightColors[MAX_POINT_LIGHTS];
 
 	//这里定义了颜色和基本贴图。这边没有定义贴图的缩放偏移。
 	real4 _Color;
@@ -45,32 +45,58 @@
 		o.normal = TransformObjectToWorldNormal(v.normal);
 		return o;
 	}
+	
 
 	half4 frag(v2f i) : SV_Target
 	{
 		//像素管线中计算点光源光照
 		half3 pLight = 0;
 		half3 viewDir =0;
-		for (int n = 0; n < MAX_POINT_LIGHTS; n++)
+
+		// for (int n = 0; n < _DirectionalLightCount; n++)
+		// {
+		// 	real specular = 0;
+		// 	half3 pLightVector = _DirectionalLightDirections[n].xyz - i.position;
+		// 	half3 pLightDir = normalize(pLightVector);
+		// 	//距离平方，用于计算点光衰减
+		// 	half distanceSqr = max(dot(pLightVector, pLightVector), 0.00001);
+		// 	//点光衰减公式pow(max(1 - pow((distance*distance/range*range),2),0),2)
+		// 	half pLightAttenuation = pow(max(1 - pow((distanceSqr / (_DirectionalLightColors[n].a * _DirectionalLightColors[n].a)), 2),0), 2);
+		// 	half3 halfDir = normalize(viewDir + pLightDir);
+		// 	half noraml_dir =  saturate(dot(i.normal, halfDir));
+		// 	specular = SafePositivePow(noraml_dir, _SpecularPow);
+		// 	pLight += (1 + specular) * saturate(dot(i.normal, pLightDir)) * _DirectionalLightColors[n].rgb * pLightAttenuation;
+		// }
+
+		half3 lightDir = 0;
+		half3 lightRGB = 0;
+		half4 lightColor;
+		for (int n = 0; n < _DirectionalLightCount; n++) //支持多个直接灯，但其他灯只能被设置为不重要
 		{
+			lightDir = _DirectionalLightDirections[n];
+			lightColor = _DirectionalLightColors[n];
+
+			//1.兰伯特光照计算
+			half light = saturate(dot(i.normal,lightDir));
+			lightRGB += light * lightColor;
+
+			//2.高光
 			real specular = 0;
-			half3 pLightVector = _PLightPos[n].xyz - i.position;
+			half3 pLightVector = lightDir.xyz - i.position;
 			half3 pLightDir = normalize(pLightVector);
 			//距离平方，用于计算点光衰减
 			half distanceSqr = max(dot(pLightVector, pLightVector), 0.00001);
 			//点光衰减公式pow(max(1 - pow((distance*distance/range*range),2),0),2)
-			half pLightAttenuation = pow(max(1 - pow((distanceSqr / (_PLightColor[n].a * _PLightColor[n].a)), 2),0), 2);
+			half pLightAttenuation = pow(max(1 - pow((distanceSqr / (lightColor.a * lightColor.a)), 2),0), 2);
 			half3 halfDir = normalize(viewDir + pLightDir);
 			half noraml_dir =  saturate(dot(i.normal, halfDir));
 			specular = SafePositivePow(noraml_dir, _SpecularPow);
-			pLight += (1 + specular) * saturate(dot(i.normal, pLightDir)) * _PLightColor[n].rgb * pLightAttenuation;
+			pLight += (1 + specular) * saturate(dot(i.normal, pLightDir)) * lightColor.rgb * pLightAttenuation;
 		}
 
 
-		half4 fragColor = half4(_Color.rgb,1.0) * tex2D(_MainTex, i.uv);
-		//获得光照参数，进行兰伯特光照计算
-		half light = saturate(dot(i.normal, _DLightDir));
-		fragColor.rgb *= light * _DLightColor;
+		half4 fragColor = half4(_Color.rgb*lightRGB,1.0) * tex2D(_MainTex, i.uv);
+
 		return fragColor;
 	}
 
@@ -84,6 +110,7 @@
 		{
 			Tags{ "LightMode" = "SrpLit" }
 			HLSLPROGRAM
+			#pragma multi_compile _ _LIGHTS_PER_OBJECT
 			#pragma vertex vert
 			#pragma fragment frag
 			ENDHLSL

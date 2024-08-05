@@ -87,7 +87,7 @@ public partial class CameraRenderer {
         renderContext.SetupCameraProperties(camera);
 
         //设置光照和阴影贴图
-        //lighting.Setup(context, cullingResults, shadowSettings, useLightsPerObject);
+        lighting.Setup(context, cullingResults, shadowSettings, useLightsPerObject);
 		//后处理
 		postFXStack.Setup(context, camera, postFXSettings, useHDR);
 
