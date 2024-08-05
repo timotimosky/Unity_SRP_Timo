@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: New Material
+  m_Name: srpOpaque
   m_Shader: {fileID: 4800000, guid: dced5f8ca5ed34c42b157eff70b9ee30, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -76,7 +76,7 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularFactor: 1
     - _SpecularHighlights: 1
-    - _SpecularPow: 50
+    - _SpecularPow: 5
     - _SpecularPower: 100
     - _SrcBlend: 1
     - _UVSec: 0
