@@ -5,6 +5,7 @@ using UnityEditor.ProjectWindowCallback;
 #endif
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 //RP 资源的主要用途是为 Unity 提供一种获取负责渲染的管道对象实例的方法。资产本身只是一个句柄和存储设置的地方。
 [CreateAssetMenu(fileName = "New Srp RenderPipeline Asset", menuName = "SRP/New Render Pipeline Asset")]
 public class CustomRenderPipelineAsset : RenderPipelineAsset {
@@ -13,13 +14,15 @@ public class CustomRenderPipelineAsset : RenderPipelineAsset {
 	bool allowHDR = true;
 
 	[SerializeField]
-	bool
-		useDynamicBatching = true,
-		useGPUInstancing = true,
-		useSRPBatcher = true,
-		useLightsPerObject = true;
+	bool	
+        useDynamicBatching = true,
+        useGPUInstancing = true,
+	    useSRPBatcher = true,
+	    useLightsPerObject = true;
 
-	[SerializeField]
+    [SerializeField] MsaaQuality m_MSAA = MsaaQuality.Disabled;
+
+    [SerializeField]
 	ShadowSettings shadows = default;
 
 	[SerializeField]
@@ -33,10 +36,11 @@ public class CustomRenderPipelineAsset : RenderPipelineAsset {
     }
 
     protected override RenderPipeline CreatePipeline () {
-		return new CustomRenderPipeline(
+
+        return new CustomRenderPipeline(
 			allowHDR, useDynamicBatching, useGPUInstancing, useSRPBatcher,
-			useLightsPerObject, shadows, postFXSettings
-		);
+			useLightsPerObject, shadows, postFXSettings, m_MSAA
+        );
 	}
 
     class CreateSrpPipelineAsset : EndNameEditAction

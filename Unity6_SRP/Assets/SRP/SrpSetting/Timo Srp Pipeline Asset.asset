@@ -17,6 +17,7 @@ MonoBehaviour:
   useGPUInstancing: 1
   useSRPBatcher: 1
   useLightsPerObject: 1
+  m_MSAA: 8
   shadows:
     maxDistance: 100
     distanceFade: 0.1

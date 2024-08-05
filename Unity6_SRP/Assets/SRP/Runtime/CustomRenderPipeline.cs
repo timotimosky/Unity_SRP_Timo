@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+using static UnityEngine.Rendering.DebugUI;
 
 
 //SRP虽然都是前向渲染，但DrawCall明显变少了。非SRP虽然也可以单Pass多光源，但除平行光外，
@@ -11,7 +14,7 @@ public partial class CustomRenderPipeline : RenderPipeline {
 
 	CameraRenderer renderer = new CameraRenderer();
 
-	bool allowHDR;
+    bool allowHDR;
 
 	bool useDynamicBatching, useGPUInstancing, useLightsPerObject;
 
@@ -22,7 +25,7 @@ public partial class CustomRenderPipeline : RenderPipeline {
 	//每一次需要自定义渲染管线的时候都需要继承于这个RenderPipeline类
 	//在一个游戏里，可以写多条渲染管线，并且按照需要在它们之间切换。
 	public CustomRenderPipeline (bool allowHDR,bool useDynamicBatching, bool useGPUInstancing, bool useSRPBatcher,
-		bool useLightsPerObject, ShadowSettings shadowSettings,PostFXSettings postFXSettings) 
+		bool useLightsPerObject, ShadowSettings shadowSettings,PostFXSettings postFXSettings, MsaaQuality m_MSAA) 
 	{
 		this.allowHDR = allowHDR;
 		this.postFXSettings = postFXSettings;
@@ -32,7 +35,17 @@ public partial class CustomRenderPipeline : RenderPipeline {
 		this.useLightsPerObject = useLightsPerObject;
 		GraphicsSettings.useScriptableRenderPipelineBatching = useSRPBatcher;
 		GraphicsSettings.lightsUseLinearIntensity = true;
-		InitializeForEditor();
+
+      //  m_MSAA = (MsaaQuality)value;
+        int msaaSampleCount =(int)m_MSAA;
+		Debug.Log("采样数量...."+ (int)m_MSAA);
+        if (msaaSampleCount != 1)
+            QualitySettings.antiAliasing = msaaSampleCount;
+        else
+            QualitySettings.antiAliasing = 0;
+
+
+        InitializeForEditor();
 	}
 
 	//Render函数用于每一帧执行所有的渲染，
