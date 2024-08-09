@@ -127,7 +127,7 @@
 				*/
 				if (v1 > 1 || v2 < 0 || u1 < 0 || u2 > 1)
 					color = lerp(color, real3(1, 1, 1), 0.4);
-				return real4(color, tc.a) * _AlphaT  + -;
+				return real4(color, tc.a) * _AlphaT+m_OutsideColor;
 			}
 
 			ENDHLSL
