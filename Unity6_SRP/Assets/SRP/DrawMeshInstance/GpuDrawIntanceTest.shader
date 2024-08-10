@@ -41,6 +41,7 @@
 			#pragma vertex vert
 			#pragma fragment frag
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+			#pragma multi_compile_instancing
 			UNITY_INSTANCING_BUFFER_START(Props)
 				UNITY_DEFINE_INSTANCED_PROP(real4, _OutsideColor)
 			UNITY_INSTANCING_BUFFER_END(Props)
