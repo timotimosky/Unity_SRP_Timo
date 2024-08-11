@@ -7,6 +7,8 @@ using UnityEngine;
 //同材质下，可以不破坏动态批处理
 
 //单纯使用材质块 不可以用来合并drawcall。还必须结合draw函数
+
+//测试动态批处理
 public class TestPropertyBlock : MonoBehaviour {
     GameObject[] listObj = null;
     GameObject[] listProp = null;
