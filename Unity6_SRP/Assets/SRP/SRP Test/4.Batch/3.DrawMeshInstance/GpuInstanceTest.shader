@@ -1,4 +1,4 @@
-﻿Shader "DJL/MatrilBlockShaderTest" {
+﻿Shader "DJL/GpuInstanceTest" {
 	Properties {
 		
 		_Sin("Sin", Float) = 0
@@ -37,10 +37,14 @@
 			Blend SrcAlpha OneMinusSrcAlpha
 
 			HLSLPROGRAM
-			
+			//multi_compile_instancing使Unity 生成两种着色器变体，一种支持 GPU 实例化，另一种不支持 GPU 实例化。
+			//材质中还出现了一个切换选项
+			#pragma multi_compile_instancing
 			#pragma vertex vert
 			#pragma fragment frag
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+			//constBuffer传参处理 ：必须用数组引用替换
 			UNITY_INSTANCING_BUFFER_START(Props)
 				UNITY_DEFINE_INSTANCED_PROP(real4, _OutsideColor)
 			UNITY_INSTANCING_BUFFER_END(Props)
@@ -59,6 +63,7 @@
 			struct a2v {
 				float4 vertex : POSITION;
 				float2 uv : TEXCOORD0;
+				//使用 GPU 实例化时，对象索引也可用作顶点属性
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 			
@@ -73,7 +78,10 @@
 				//UNITY_SETUP_INSTANCE_ID放在顶点着色器和片段着色器中最开始的地方，用来访问全局unity_InstanceID
 				//因为现在VBO相同，但GPU需要InstanceID来访问不同的PBO(也就是我们的材质块传递进来的东西)
 				//当需要将实例化ID传到片段着色器时，在顶点着色器中添加UNITY_TRANSFER_INSTANCE_ID(v, o);
+
+				//从输入中提取索引，并将其存储在其他实例化宏所依赖的全局静态变量中
 				UNITY_SETUP_INSTANCE_ID(v); 
+				//使实例索引在frag中可用
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
 				o.pos = TransformObjectToHClip(v.vertex);
 				o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);

@@ -23,7 +23,11 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
     //预制体可能由多个mesh组成
     MeshFilter[] meshFs;
+
+    Mesh[] sharedMesh;
     Renderer[] renders;
+    Material[] sharedMaterial;
+
 
     [SerializeField]
 	Mesh mesh = default;
@@ -46,7 +50,7 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 		smoothness = new float[MaxInstanceCount];
 
 	MaterialPropertyBlock block;
-
+    MeshRenderer mMeshRenderer;
     //这个变量类似于unity5.6材质属性的Enable Instance Variants勾选项
     public bool turnOnInstance = true;
 
@@ -96,18 +100,38 @@ public class DrawMeshInstanceTest : MonoBehaviour {
     }
 
 
+    public bool EnableInstancing()
+    {
+        material.enableInstancing = true;
+        if (!material.enableInstancing)
+        {
+            Debug.LogError("无法开启 !material.enableInstancing");
+            enabled = false;
+            return false;
+        }
+        if (!SystemInfo.supportsInstancing)
+        {
+            Debug.LogError("无法开启 !SystemInfo.supportsInstancing");
+            enabled = false;
+            return false;
+        }
+        return true;
+    }
+
+
 
     void Awake () {
-
+        mMeshRenderer = m_prefab.GetComponent<MeshRenderer>();
         Test();
         Shader.EnableKeyword("LIGHTMAP_ON");//开启lightmap
                                             //Shader.DisableKeyword("LIGHTMAP_OFF")
 
-        var mf = m_prefab.GetComponent<MeshFilter>();
+        var meshFilter = m_prefab.GetComponent<MeshFilter>();
 
         if (mesh == null)
             mesh = materialProperties[0].GetComponent<MeshFilter>().sharedMesh;
 
+        material = mMeshRenderer.sharedMaterial;
         if (material == null)
             material = materialProperties[0].GetComponent<MeshRenderer>().sharedMaterial;
 
@@ -115,10 +139,20 @@ public class DrawMeshInstanceTest : MonoBehaviour {
         if (mesh == null)
         {
             meshFs = m_prefab.GetComponentsInChildren<MeshFilter>();
+            sharedMesh = new Mesh[meshFs.Length];
+            for (int i=0;i<meshFs.Length; i++)
+            {
+                sharedMesh[i] = meshFs[i].sharedMesh;
+            }
         }
         if (material == null)
         {
             renders = m_prefab.GetComponentsInChildren<Renderer>();
+            sharedMaterial = new Material[renders.Length];
+            for (int i = 0; i < renders.Length; i++)
+            {
+                sharedMaterial[i] = renders[i].sharedMaterial;
+            }
         }
 
         shadowCastingMode = ShadowCastingMode.On;
@@ -133,7 +167,6 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 			metallic[i] = Random.value < 0.25f ? 1f : 0f;
 			smoothness[i] = Random.Range(0.05f, 0.95f);
         }
-
     }
 
     // 两者都需要在for循环内部，每次单独提交
@@ -163,7 +196,7 @@ public class DrawMeshInstanceTest : MonoBehaviour {
             block.CopySHCoefficientArraysFrom(lightProbes);
             block.CopyProbeOcclusionArrayFrom(occlusionProbes);
         }
-        if (turnOnInstance)
+        if (turnOnInstance && EnableInstancing())
         {
             /*
             Mesh 索要绘制的网格
@@ -175,24 +208,23 @@ public class DrawMeshInstanceTest : MonoBehaviour {
             还有很多参数，不过画草的话用不到	
             */
 
+            LightProbeUsage mLightProbeUsage = lightProbeVolume ? LightProbeUsage.UseProxyVolume : LightProbeUsage.CustomProvided;
+
             if (mesh)
             Graphics.DrawMeshInstanced(
             mesh, 0, material, matrix4x4s, matrix4x4s.Length, block,
-            shadowCastingMode, true, 0, null,
-            lightProbeVolume ? LightProbeUsage.UseProxyVolume : LightProbeUsage.CustomProvided, lightProbeVolume);
+            shadowCastingMode, true, 0, null,mLightProbeUsage, lightProbeVolume);
             else
             {
                 for (int i = 0; i < meshFs.Length; ++i)
                 {
-                    Graphics.DrawMeshInstanced(meshFs[i].sharedMesh, 0, renders[i].sharedMaterial, 
-                        matrix4x4s, matrix4x4s.Length, block, shadowCastingMode, true, 0, null,
-            lightProbeVolume ? LightProbeUsage.UseProxyVolume : LightProbeUsage.CustomProvided, lightProbeVolume);
+                    Graphics.DrawMeshInstanced(sharedMesh[i], 0, sharedMaterial[i], 
+                        matrix4x4s, matrix4x4s.Length, block, shadowCastingMode, true, 0, null,mLightProbeUsage, lightProbeVolume);
                 }
             }
         }
         // public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, 
         //int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties);
-        // Graphics.DrawMeshInstanced(mesh, 0, material, matrices.ToArray(), 1, block);
        // Graphics.DrawMesh(mesh, pos, Quaternion.identity, material, 2 << 1, Camera.main, 0, block); ;
     }
 }

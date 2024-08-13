@@ -28,35 +28,15 @@ public class PerObjectMaterialProperties : MonoBehaviour {
 	[SerializeField, ColorUsage(false, true)]
 	Color emissionColor = Color.black;
 
-	void Awake () {
+    MeshRenderer mMeshRenderer;
+
+    void Awake () {
         mMeshRenderer = GetComponent<MeshRenderer>();
-        EnableInstancing();
         SetObjPropertyBlock();
     }
 
 	void OnValidate () {
 		SetObjPropertyBlock();
-    }
-
-    Material material;
-    MeshRenderer mMeshRenderer;
-    public bool EnableInstancing()
-    {
-        material = mMeshRenderer.sharedMaterial;
-        material.enableInstancing = true;
-        if (!material.enableInstancing)
-        {
-            Debug.LogError("无法开启 !material.enableInstancing");
-            enabled = false;
-            return false;
-        }
-        if (!SystemInfo.supportsInstancing)
-        {
-            Debug.LogError("无法开启 !SystemInfo.supportsInstancing");
-            enabled = false;
-            return false;
-        }
-        return true;
     }
 
 
