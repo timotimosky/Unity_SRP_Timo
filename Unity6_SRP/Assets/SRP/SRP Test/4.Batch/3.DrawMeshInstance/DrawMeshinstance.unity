@@ -150,13 +150,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f4e5bddc090f46f8acfc6475bf68617, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  materialProperties: []
   m_prefab: {fileID: 2406525217209616907, guid: bb49f4ed738269943b90de47088c99d7, type: 3}
   mesh: {fileID: 4300000, guid: f0a6094c3d436d847bd2f0893b2b9b40, type: 2}
   material: {fileID: 2100000, guid: a3efd82b062695446a8b83f4f12477f9, type: 2}
   lightProbeVolume: {fileID: 0}
   shadowCastingMode: 0
   turnOnInstance: 1
+  ifCull: 1
+  TestNum: 5000
+  needRenderIndex: 0
 --- !u!114 &464753039
 MonoBehaviour:
   m_ObjectHideFlags: 0

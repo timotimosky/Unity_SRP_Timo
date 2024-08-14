@@ -55,6 +55,9 @@ public class DrawMeshInstanceTest : MonoBehaviour {
     public bool turnOnInstance = true;
 
     public bool ifCull = true;
+
+    public int TestNum = 1023;
+
     //bool ShouldCullCell(Vector3 cellPosition, Transform cameraTransform, Plane[] frustumPlanes)
     //{
     //    var cellSize = MaxBrickSize();
@@ -73,8 +76,8 @@ public class DrawMeshInstanceTest : MonoBehaviour {
     //}
     public void InitFakerData()
     {
-        materialProperties = new List<PerObjectMaterialProperties>(MaxInstanceCount);
-        for (int i = 0; i < MaxInstanceCount; i++)
+        materialProperties = new List<PerObjectMaterialProperties>(TestNum);
+        for (int i = 0; i < TestNum; i++)
         {
             PerObjectMaterialProperties perObjectMaterialProperties = new PerObjectMaterialProperties();
             materialProperties.Add(perObjectMaterialProperties);
@@ -105,8 +108,15 @@ public class DrawMeshInstanceTest : MonoBehaviour {
             else
                 needRenderMaterialProperties.Add(prop);
         }
-        matrix4x4s = new Matrix4x4[needRenderMaterialProperties.Count];
-        for (int i = 0; i < needRenderMaterialProperties.Count; i++)
+    }
+
+    public int needRenderIndex = 0;
+    int needRenderCount =0;
+    public void DrawInstanceOnce()
+    {
+
+        matrix4x4s = new Matrix4x4[needRenderCount];
+        for (int i = 0; i < needRenderCount; i++)
         {
             PerObjectMaterialProperties prop = needRenderMaterialProperties[i];
 
@@ -116,12 +126,64 @@ public class DrawMeshInstanceTest : MonoBehaviour {
                 prop.dirty = false;
             }
 
-            matrix4x4s[i]=(prop.matrix4X4);
+            matrix4x4s[i] = (prop.matrix4X4);
             baseColors[i] = prop.baseColor;
             metallic[i] = prop.metallic;
             smoothness[i] = prop.smoothness;
         }
+
+
+        block.SetVectorArray(baseColorId, baseColors);
+        block.SetFloatArray(metallicId, metallic);
+        block.SetFloatArray(smoothnessId, smoothness);
+
+        //如果probe灯光存在
+        if (!lightProbeVolume)
+        {
+            var positions = new Vector3[MaxInstanceCount];
+            for (int i = 0; i < matrix4x4s.Length; i++)
+            {
+                positions[i] = matrix4x4s[i].GetColumn(3);
+            }
+            var lightProbes = new SphericalHarmonicsL2[MaxInstanceCount];
+            var occlusionProbes = new Vector4[MaxInstanceCount];
+            LightProbes.CalculateInterpolatedLightAndOcclusionProbes(
+                positions, lightProbes, occlusionProbes
+            );
+            block.CopySHCoefficientArraysFrom(lightProbes);
+            block.CopyProbeOcclusionArrayFrom(occlusionProbes);
+        }
+        if (turnOnInstance && EnableInstancing())
+        {
+            /*
+            Mesh 索要绘制的网格
+            submeshIndex 要绘制网格的哪个子集,由多个网格组成的才用得到，一般为0
+            Material 材质
+            Matrix4x4s 矩阵数组
+            count 数量 最多只能绘制MaxInstanceCount个实例，也就是说count<=MaxInstanceCount。
+            properties 步骤3中创建的MaterialPropertyBlock，用来传递属性
+            还有很多参数，不过画草的话用不到
+            */
+            LightProbeUsage mLightProbeUsage = lightProbeVolume ? LightProbeUsage.UseProxyVolume : LightProbeUsage.CustomProvided;
+
+            if (mesh)
+                Graphics.DrawMeshInstanced(mesh, 0, material, matrix4x4s, matrix4x4s.Length, block,
+                shadowCastingMode, true, 0, null, mLightProbeUsage, lightProbeVolume);
+            else
+            {
+                for (int i = 0; i < renderIndex.Count; ++i)
+                {
+                    int index = renderIndex[i];
+                    Graphics.DrawMeshInstanced(sharedMesh[index], 0, sharedMaterial[index],
+                        matrix4x4s, matrix4x4s.Length, block, shadowCastingMode, true, 0, null, mLightProbeUsage, lightProbeVolume);
+                }
+            }
+        }
+        // public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, 
+        //int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties);
+        // Graphics.DrawMesh(mesh, pos, Quaternion.identity, material, 2 << 1, Camera.main, 0, block); ;
     }
+
 
 
     void OnPostRender() //RequireComponent camera
@@ -208,55 +270,20 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
         CollectionDrawData();
 
-
-        block.SetVectorArray(baseColorId, baseColors);
-        block.SetFloatArray(metallicId, metallic);
-        block.SetFloatArray(smoothnessId, smoothness);
-
-        //如果probe灯光存在
-        if (!lightProbeVolume)
+        needRenderIndex = 0;
+        while (true)
         {
-            var positions = new Vector3[MaxInstanceCount];
-            for (int i = 0; i < matrix4x4s.Length; i++)
-            {
-                positions[i] = matrix4x4s[i].GetColumn(3);
-            }
-            var lightProbes = new SphericalHarmonicsL2[MaxInstanceCount];
-            var occlusionProbes = new Vector4[MaxInstanceCount];
-            LightProbes.CalculateInterpolatedLightAndOcclusionProbes(
-                positions, lightProbes, occlusionProbes
-            );
-            block.CopySHCoefficientArraysFrom(lightProbes);
-            block.CopyProbeOcclusionArrayFrom(occlusionProbes);
-        }
-        if (turnOnInstance && EnableInstancing())
-        {
-            /*
-            Mesh 索要绘制的网格
-            submeshIndex 要绘制网格的哪个子集,由多个网格组成的才用得到，一般为0
-            Material 材质
-            Matrix4x4s 矩阵数组
-            count 数量 最多只能绘制MaxInstanceCount个实例，也就是说count<=MaxInstanceCount。
-            properties 步骤3中创建的MaterialPropertyBlock，用来传递属性
-            还有很多参数，不过画草的话用不到
-            */
-            LightProbeUsage mLightProbeUsage = lightProbeVolume ? LightProbeUsage.UseProxyVolume : LightProbeUsage.CustomProvided;
+            needRenderCount = needRenderMaterialProperties.Count - needRenderIndex;
+            if (needRenderCount < 1)
+                return;
 
-            if (mesh)
-                Graphics.DrawMeshInstanced(mesh, 0, material, matrix4x4s, matrix4x4s.Length, block,
-                shadowCastingMode, true, 0, null,mLightProbeUsage, lightProbeVolume);
-            else
+            if (needRenderCount > MaxInstanceCount)
             {
-                for (int i = 0; i < renderIndex.Count; ++i)
-                {
-                    int index = renderIndex[i];
-                    Graphics.DrawMeshInstanced(sharedMesh[index], 0, sharedMaterial[index], 
-                        matrix4x4s, matrix4x4s.Length, block, shadowCastingMode, true, 0, null,mLightProbeUsage, lightProbeVolume);
-                }
+                needRenderCount = MaxInstanceCount;
             }
+            needRenderIndex += needRenderCount;
+
+            DrawInstanceOnce();
         }
-        // public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, Material material, 
-        //int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties);
-       // Graphics.DrawMesh(mesh, pos, Quaternion.identity, material, 2 << 1, Camera.main, 0, block); ;
     }
 }
