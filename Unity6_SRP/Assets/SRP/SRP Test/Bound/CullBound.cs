@@ -95,17 +95,30 @@ public class CullBound
     }
 
     private NativeArray<float4> frustumPlanes;//给Ecs用的裁剪面
+    private NativeArray<float3> centerList;//给Ecs用的裁剪面
+    private NativeArray<float> raidusList;//给Ecs用的裁剪面
+    private NativeArray<int> ifCullList;//给Ecs用的裁剪面
     private Plane[] CameraSourcePlanes = new Plane[6];//原生获得的裁剪面
     private Camera camera; //主相机，需要外部传入
 
+    private int persistentCount = 1023;
+
     public CullBound(Camera camera)
     {
-         this.camera= camera;
+        this.camera= camera;
+        frustumPlanes = new NativeArray<float4>(6, Allocator.Persistent);
+        Persistent();
+    }
+
+    private void Persistent()
+    {
+        centerList = new NativeArray<float3>(persistentCount, Allocator.Persistent);
+        raidusList = new NativeArray<float>(persistentCount, Allocator.Persistent);
+        ifCullList = new NativeArray<int>(persistentCount, Allocator.Persistent);
     }
 
     private void UpdateFrustumPlanes()
     {
-        frustumPlanes = new NativeArray<float4>(6, Allocator.Persistent);
         //通过Unity原生API来获取相机裁剪面
         GeometryUtility.CalculateFrustumPlanes(camera, CameraSourcePlanes);
         //这里因为要给ECS用，所以需要转换为Native数据保存。
@@ -121,12 +134,12 @@ public class CullBound
     {
         UpdateFrustumPlanes();
         int cout = materialProperties.Count;
-        var centerList = new NativeArray<float3>(cout, Allocator.Persistent);
-
-        var raidusList = new NativeArray<float>(cout, Allocator.Persistent);
-
-        var ifCullList = new NativeArray<int>(cout, Allocator.Persistent);
-
+        if (persistentCount < cout)
+        {
+            persistentCount = cout;
+            Persistent();
+            Debug.LogError("进行一次预分配");
+        }
         for (var i = 0; i < cout; i++)
         {
             PerObjectMaterialProperties mPerObjectMaterialProperties = materialProperties[i];
