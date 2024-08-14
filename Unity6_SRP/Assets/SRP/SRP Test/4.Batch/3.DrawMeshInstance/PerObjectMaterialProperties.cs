@@ -2,14 +2,15 @@
 
 //组织每个物体的参数
 [DisallowMultipleComponent]
-public class PerObjectMaterialProperties : MonoBehaviour {
-
+public class PerObjectMaterialProperties {
 
 	public bool dirty = false;
-
 	public Matrix4x4 matrix4X4 = Matrix4x4.identity;
 
+    public Vector3 position= Vector3.zero;
+    public Vector3 scale;
 
+    public Quaternion rotation;
     static int
 		baseColorId = Shader.PropertyToID("_BaseColor"),
 		cutoffId = Shader.PropertyToID("_Cutoff"),
@@ -20,29 +21,17 @@ public class PerObjectMaterialProperties : MonoBehaviour {
 	static MaterialPropertyBlock arrayBlock;
 
 	[SerializeField]
-	Color baseColor = Color.white;
+    public Color baseColor = Color.white;
 
 	[SerializeField, Range(0f, 1f)]
-	float alphaCutoff = 0.5f, metallic = 0f, smoothness = 0.5f;
+    public float alphaCutoff = 0.5f, metallic = 0f, smoothness = 0.5f;
 
 	[SerializeField, ColorUsage(false, true)]
 	Color emissionColor = Color.black;
 
-    MeshRenderer mMeshRenderer;
-
-    void Awake () {
-        mMeshRenderer = GetComponent<MeshRenderer>();
-        SetObjPropertyBlock();
-    }
-
-	void OnValidate () {
-		SetObjPropertyBlock();
-    }
-
 
     public void SetObjPropertyBlock()
 	{
-        mMeshRenderer.GetPropertyBlock(arrayBlock);
         if (arrayBlock == null)
         {
             arrayBlock = new MaterialPropertyBlock();
@@ -52,15 +41,18 @@ public class PerObjectMaterialProperties : MonoBehaviour {
         arrayBlock.SetFloat(metallicId, metallic);
         arrayBlock.SetFloat(smoothnessId, smoothness);
         arrayBlock.SetColor(emissionColorId, emissionColor);
-        mMeshRenderer.SetPropertyBlock(arrayBlock);
 
-        matrix4X4 = Matrix4x4.TRS(transform.position, transform.rotation, transform.localScale);
+        matrix4X4 = Matrix4x4.TRS(position, rotation, scale);
     }
 
 
+    public void SetMatrix4X4()
+    {
+        matrix4X4 = Matrix4x4.TRS(position, rotation, scale);
+    }
     public void SetPos()
     {
-        matrix4X4.SetColumn(3, transform.position);
+        matrix4X4.SetColumn(3, position);
     }
 
     public void SetScale(Vector3 localScale)
