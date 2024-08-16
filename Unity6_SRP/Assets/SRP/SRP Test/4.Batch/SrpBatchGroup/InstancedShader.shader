@@ -44,11 +44,11 @@
 
             v2f vert (appdata_full v, uint instanceID : SV_InstanceID)
             {
-            #if SHADER_TARGET >= 45
-                float4 data = positionBuffer[instanceID];
-            #else
-                float4 data = 0;
-            #endif
+                #if SHADER_TARGET >= 45
+                    float4 data = positionBuffer[instanceID];
+                #else
+                    float4 data = 0;
+                #endif
 
                 float rotation = data.w * data.w * _Time.x * 0.5f;
                 rotate2D(data.xz, rotation);
