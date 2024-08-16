@@ -5,6 +5,8 @@
 public class PerObjectMaterialProperties {
 
 	public bool dirty = false;
+
+   // transfrom.localToWorldMatrix;
 	public Matrix4x4 matrix4X4 = Matrix4x4.identity;
 
     public Vector3 position= Vector3.zero;

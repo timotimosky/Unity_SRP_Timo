@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.ComponentModel;
+using System.Numerics;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -41,6 +43,9 @@ public class DrawMeshInstanceTest : MonoBehaviour {
     [SerializeField]
     ShadowCastingMode shadowCastingMode;//阴影选项
 
+    [SerializeField]
+    public bool receiveShadow =true;//阴影
+
     const int MaxInstanceCount = 1023;
 
     Matrix4x4[] matrix4x4s;
@@ -56,24 +61,12 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
     public bool ifCull = true;
 
+    public bool useCommandBuffer = false;
+
     public int TestNum = 1023;
+    public int layer = 0;
 
-    //bool ShouldCullCell(Vector3 cellPosition, Transform cameraTransform, Plane[] frustumPlanes)
-    //{
-    //    var cellSize = MaxBrickSize();
-    //    var originWS = GetTransform().posWS;
-    //    Vector3 cellCenterWS = cellPosition * cellSize + originWS + Vector3.one * (cellSize / 2.0f);
-
-    //    // We do coarse culling with cell, finer culling later.
-    //    float distanceRoundedUpWithCellSize = Mathf.CeilToInt(debugDisplay.probeCullingDistance / cellSize) * cellSize;
-
-    //    if (Vector3.Distance(cameraTransform.position, cellCenterWS) > distanceRoundedUpWithCellSize)
-    //        return true;
-
-    //    var volumeAABB = new Bounds(cellCenterWS, cellSize * Vector3.one);
-
-    //    return !GeometryUtility.TestPlanesAABB(frustumPlanes, volumeAABB);
-    //}
+    public Camera bufferCamera;
     public void InitFakerData()
     {
         materialProperties = new List<PerObjectMaterialProperties>(TestNum);
@@ -91,19 +84,24 @@ public class DrawMeshInstanceTest : MonoBehaviour {
             materialProperties[i].smoothness = Random.Range(0.05f, 0.95f);
         }
     }
-    List<int> renderIndex = new List<int>();
+
+
+
+
     public void CollectionDrawData()
 	{
-        cullResult = cullBound.ExcuteCullJob(materialProperties);
+        if(ifCull)
+            cullResult = cullBound.ExcuteCullJob(materialProperties);
 
         needRenderMaterialProperties = new List<PerObjectMaterialProperties>();
         for (int i=0; i < materialProperties.Count; i++)
         {
             PerObjectMaterialProperties prop= materialProperties[i];
-
-            if (cullResult[i] == 0&& ifCull)
+            //bool outOrIn = cullBound.ShouldCullCell(prop.position,prop.scale.x,prop.position);
+            //if (outOrIn && ifCull)
+            if (ifCull &&cullResult[i] == 0)
             {
-
+                //Debug.Log("需要被剔除");
             }
             else
                 needRenderMaterialProperties.Add(prop);
@@ -112,9 +110,10 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
     public int needRenderIndex = 0;
     int needRenderCount =0;
-    public void DrawInstanceOnce()
-    {
 
+
+    private void SetBlock()
+    {
         matrix4x4s = new Matrix4x4[needRenderCount];
         for (int i = 0; i < needRenderCount; i++)
         {
@@ -136,24 +135,34 @@ public class DrawMeshInstanceTest : MonoBehaviour {
         block.SetVectorArray(baseColorId, baseColors);
         block.SetFloatArray(metallicId, metallic);
         block.SetFloatArray(smoothnessId, smoothness);
-
         //如果probe灯光存在
         if (!lightProbeVolume)
         {
-            var positions = new Vector3[MaxInstanceCount];
+            var positions = new Vector3[needRenderCount];
             for (int i = 0; i < matrix4x4s.Length; i++)
             {
                 positions[i] = matrix4x4s[i].GetColumn(3);
             }
-            var lightProbes = new SphericalHarmonicsL2[MaxInstanceCount];
-            var occlusionProbes = new Vector4[MaxInstanceCount];
+            var lightProbes = new SphericalHarmonicsL2[needRenderCount];
+            var occlusionProbes = new Vector4[needRenderCount];
             LightProbes.CalculateInterpolatedLightAndOcclusionProbes(
                 positions, lightProbes, occlusionProbes
             );
             block.CopySHCoefficientArraysFrom(lightProbes);
             block.CopyProbeOcclusionArrayFrom(occlusionProbes);
         }
-        if (turnOnInstance && EnableInstancing())
+    }
+
+    public void DrawInstanceOnce()
+    {
+        SetBlock();
+
+        if (useCommandBuffer)
+        {
+            CommandBufferForDrawMeshInstanced();
+            Debug.LogError("渲染..........Buffer===");
+        }
+        else if (turnOnInstance && EnableInstancing())
         {
             /*
             Mesh 索要绘制的网格
@@ -168,14 +177,13 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
             if (mesh)
                 Graphics.DrawMeshInstanced(mesh, 0, material, matrix4x4s, matrix4x4s.Length, block,
-                shadowCastingMode, true, 0, null, mLightProbeUsage, lightProbeVolume);
+                shadowCastingMode, receiveShadow, layer, null, mLightProbeUsage, lightProbeVolume);
             else
             {
-                for (int i = 0; i < renderIndex.Count; ++i)
+                for (int i = 0; i < sharedMesh.Length; ++i)
                 {
-                    int index = renderIndex[i];
-                    Graphics.DrawMeshInstanced(sharedMesh[index], 0, sharedMaterial[index],
-                        matrix4x4s, matrix4x4s.Length, block, shadowCastingMode, true, 0, null, mLightProbeUsage, lightProbeVolume);
+                    Graphics.DrawMeshInstanced(sharedMesh[i], 0, sharedMaterial[i],
+                        matrix4x4s, matrix4x4s.Length, block, shadowCastingMode, receiveShadow, layer, null, mLightProbeUsage, lightProbeVolume);
                 }
             }
         }
@@ -197,7 +205,6 @@ public class DrawMeshInstanceTest : MonoBehaviour {
            // Graphics.DrawMeshNow(mesh, new Vector3(i, i, i), Quaternion.identity);
         }
     }
-
 
     public bool EnableInstancing()
     {
@@ -224,7 +231,7 @@ public class DrawMeshInstanceTest : MonoBehaviour {
         InitFakerData();
         Shader.EnableKeyword("LIGHTMAP_ON");//开启lightmap
                                             //Shader.DisableKeyword("LIGHTMAP_OFF")
-
+        bufferCamera = Camera.main;
         cullBound = new CullBound(Camera.main);
         var meshFilter = m_prefab.GetComponent<MeshFilter>();
 
@@ -286,4 +293,30 @@ public class DrawMeshInstanceTest : MonoBehaviour {
             DrawInstanceOnce();
         }
     }
+
+
+    void ClearCommandBufferDraw()
+    {
+        if (commandBuffer != null)
+        {
+            if(bufferCamera==null)
+                bufferCamera =Camera.main;
+            bufferCamera.RemoveCommandBuffer(CameraEvent.AfterForwardOpaque, commandBuffer);
+            CommandBufferPool.Release(commandBuffer);
+        }
+    }
+
+    void CommandBufferForDrawMeshInstanced()
+    {
+        if (useCommandBuffer)
+        {
+            ClearCommandBufferDraw();
+
+            commandBuffer = CommandBufferPool.Get("DrawMeshInstanced");
+            commandBuffer.DrawMeshInstanced(mesh, 0, material,0, matrix4x4s, matrix4x4s.Length, block);
+            bufferCamera.AddCommandBuffer(CameraEvent.AfterForwardOpaque, commandBuffer);
+        }
+    }
+        
+    CommandBuffer commandBuffer = null;
 }

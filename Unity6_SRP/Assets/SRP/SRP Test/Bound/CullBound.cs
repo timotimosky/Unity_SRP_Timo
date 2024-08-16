@@ -18,20 +18,20 @@ public class CullBound
     struct CullJob : IJobFor
     {
         [ReadOnly]
-        public NativeArray<float4> m_FrustumPlanes;//给Ecs用的裁剪面
+        public NativeArray<float4> readFrustumPlanes;//给Ecs用的裁剪面
 
         [ReadOnly]
-        public NativeArray<float3> centerList;
+        public NativeArray<float3> readCenterList;
 
         [ReadOnly]
-        public NativeArray<float> raidusList;
+        public NativeArray<float> readRaidusList;
 
         //默认情况下，容器被假定为读取&写
 
         //0:外侧
         //1:内
         //2:部分
-        public NativeArray<int> ifCullList;
+        public NativeArray<int> out_ifCullList;
 
 
         //增量时间必须复制到作业中，因为作业通常没有帧的概念。
@@ -41,7 +41,7 @@ public class CullBound
         // 在作业中实际运行的代码
         public void Execute(int i)
         {
-            ifCullList[i] = Inside(centerList[i], raidusList[i]);
+            out_ifCullList[i] = Inside(readCenterList[i], readRaidusList[i]);
         }
         /// <summary>
         /// 球状剔除
@@ -50,11 +50,11 @@ public class CullBound
         /// <param name="radius">半径</param>
         public int Inside(float3 center, float radius)
         {
-            int length = m_FrustumPlanes.Length;
+            int length = readFrustumPlanes.Length;
             bool all_in = true;
             for (int i = 0; i < length; i++)
             {
-                float4 plane = m_FrustumPlanes[i];
+                float4 plane = readFrustumPlanes[i];
                 float3 normal = plane.xyz;
                 var distance = math.dot(normal, center) + plane.w;
                 if (distance < -radius)
@@ -76,11 +76,11 @@ public class CullBound
         /// <param name="extents">外延尺寸（size的一半）</param>
         public InsideResult Inside(float3 center, float3 extents)
         {
-            int length = m_FrustumPlanes.Length;
+            int length = readFrustumPlanes.Length;
             bool all_in = true;
             for (int i = 0; i < length; i++)
             {
-                float4 plane = m_FrustumPlanes[i];
+                float4 plane = readFrustumPlanes[i];
                 float3 normal = plane.xyz;
                 float dist = math.dot(normal, center) + plane.w;
                 float radius = math.dot(extents, math.abs(normal));
@@ -130,6 +130,25 @@ public class CullBound
         }
     }
 
+    public bool ShouldCullCell(Vector3 cellPosition, float scale, Vector3 posWS, int CellSize = 10
+, float probeCullingDistance = 200.0f)
+    {
+        var cellSize = scale * CellSize;
+        var originWS = posWS;
+        Vector3 cellCenterWS = cellPosition * cellSize + originWS + Vector3.one * (cellSize / 2.0f);
+
+        // We do coarse culling with cell, finer culling later.
+        float distanceRoundedUpWithCellSize = Mathf.CeilToInt(probeCullingDistance / cellSize) * cellSize;
+
+        //if (Vector3.Distance(camera.transform.position, cellCenterWS) > distanceRoundedUpWithCellSize)
+        //    return true;
+
+        var volumeAABB = new Bounds(cellCenterWS, cellSize * Vector3.one);
+
+        return !GeometryUtility.TestPlanesAABB(CameraSourcePlanes, volumeAABB);
+    }
+
+
     public NativeArray<int> ExcuteCullJob(List<PerObjectMaterialProperties> materialProperties)
     {
         UpdateFrustumPlanes();
@@ -138,7 +157,7 @@ public class CullBound
         {
             persistentCount = cout;
             Persistent();
-            Debug.LogError("进行一次预分配");
+            Debug.LogError("进行一次预分配"+ cout);
         }
         for (var i = 0; i < cout; i++)
         {
@@ -146,20 +165,20 @@ public class CullBound
             if (mPerObjectMaterialProperties == null)
                 Debug.LogError("不可思议");
             centerList[i] = mPerObjectMaterialProperties.position;
-            raidusList[i] = mPerObjectMaterialProperties.scale.x;
+            raidusList[i] = mPerObjectMaterialProperties.scale.x*10;
         }
 
         // Initialize the job data
         var job = new CullJob()
         {
             //NativeArray.Copy()
-            m_FrustumPlanes = frustumPlanes,
-            centerList = centerList,
-            raidusList = raidusList,
-            ifCullList= ifCullList
+            readFrustumPlanes = frustumPlanes,
+            readCenterList = centerList,
+            readRaidusList = raidusList,
+            out_ifCullList= ifCullList
         };
 
         job.Run(cout);
-        return job.ifCullList;
+        return job.out_ifCullList;
     }
 }

@@ -155,9 +155,13 @@ MonoBehaviour:
   material: {fileID: 2100000, guid: a3efd82b062695446a8b83f4f12477f9, type: 2}
   lightProbeVolume: {fileID: 0}
   shadowCastingMode: 0
+  receiveShadow: 1
   turnOnInstance: 1
   ifCull: 1
-  TestNum: 5000
+  useCommandBuffer: 0
+  TestNum: 1020
+  layer: 1
+  bufferCamera: {fileID: 0}
   needRenderIndex: 0
 --- !u!114 &464753039
 MonoBehaviour:
