@@ -1,6 +1,4 @@
 ﻿using Unity.Collections;
-using UnityEditor;
-using UnityEditor.ProjectWindowCallback;
 using UnityEngine;
 using UnityEngine.Experimental.GlobalIllumination;
 using LightType = UnityEngine.LightType;

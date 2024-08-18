@@ -1,0 +1,56 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.14f1c1
+CRC: 3442211071
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 63f95b25820386971ad790e33cbc6cc0
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 06951f589339f8e31ad05fad2a5c3eb2
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 17cac987d20b05e9e603a6908bcbd706
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 07e1ff81c7ce4a3a89ecec6497962575, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+- Class: 128
+  Script: {instanceID: 0}
+- Class: 213
+  Script: {instanceID: 0}
+- Class: 222
+  Script: {instanceID: 0}
+- Class: 223
+  Script: {instanceID: 0}
+- Class: 224
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers:
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Events.PersistentCallGroup
+- AssemblyName: UnityEngine.UI
+  ClassName: UnityEngine.UI.FontData
+- AssemblyName: UnityEngine.UI
+  ClassName: UnityEngine.UI.MaskableGraphic/CullStateChangedEvent
+Assets:
+- Assets/xasset/Samples/Arts/Prefabs/CycleReferences2.prefab
+Dependencies:
+- F:/github/Unity_SRP_Timo/Unity6_SRP/BundlesCache/Windows/prefabs_cyclereferences1_prefab.bundle

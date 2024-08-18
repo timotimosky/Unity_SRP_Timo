@@ -1,0 +1,174 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac7a7bf11606478f99185b34ad2bac9b, type: 3}
+  m_Name: PackedAssets
+  m_EditorClassIdentifier: 
+  data:
+  - asset: Assets/xasset/Samples/Arts/Scenes/Splash.unity
+    bundleMode: 0
+    addressMode: 2
+    filter: 
+    bundle: scenes_splash_unity.bundle
+  - asset: Assets/xasset/Samples/Arts/Scenes/OpeningDialog.unity
+    bundleMode: 2
+    addressMode: 2
+    filter: 
+    bundle: scenes_openingdialog_unity.bundle
+  - asset: Assets/xasset/Samples/Arts/Scenes/Menu.unity
+    bundleMode: 2
+    addressMode: 2
+    filter: 
+    bundle: scenes_menu_unity.bundle
+  - asset: Assets/xasset/Samples/Arts/Scenes/CheckForUpdates.unity
+    bundleMode: 2
+    addressMode: 2
+    filter: 
+    bundle: scenes_checkforupdates_unity.bundle
+  - asset: Assets/xasset/Samples/Arts/Prefabs/LoadingScreen.prefab
+    bundleMode: 1
+    addressMode: 1
+    filter: 
+    bundle: prefabs_loadingscreen_prefab.bundle
+  - asset: Assets/xasset/Samples/Arts/Prefabs/MessageBox.prefab
+    bundleMode: 1
+    addressMode: 1
+    filter: 
+    bundle: prefabs_messagebox_prefab.bundle
+  - asset: Assets/xasset/Samples/Arts/Scenes/Download.unity
+    bundleMode: 5
+    addressMode: 2
+    filter: 
+    bundle: scenes_download_unity.bundle
+  - asset: Assets/xasset/Samples/Arts/Scenes/LoadAsset.unity
+    bundleMode: 2
+    addressMode: 2
+    filter: 
+    bundle: scenes_loadasset_unity.bundle
+  - asset: Assets/xasset/Samples/Arts/Textures/igg.png
+    bundleMode: 1
+    addressMode: 1
+    filter: 
+    bundle: textures_igg_png.bundle
+  - asset: Assets/xasset/Samples/Arts/Textures/biubiux2.png
+    bundleMode: 1
+    addressMode: 1
+    filter: 
+    bundle: textures_biubiux2_png.bundle
+  - asset: Assets/xasset/Samples/Arts/Textures/PPJT.png
+    bundleMode: 1
+    addressMode: 1
+    filter: 
+    bundle: textures_ppjt_png.bundle
+  - asset: Assets/xasset/Samples/Arts/Prefabs/CycleReferences2.prefab
+    bundleMode: 1
+    addressMode: 1
+    filter: 
+    bundle: prefabs_cyclereferences2_prefab.bundle
+  - asset: Assets/xasset/Samples/Arts/Prefabs/CycleReferences1.prefab
+    bundleMode: 1
+    addressMode: 1
+    filter: 
+    bundle: prefabs_cyclereferences1_prefab.bundle
+  - asset: Assets/xasset/Samples/Arts/Scenes/LoadAdditiveScene.unity
+    bundleMode: 3
+    addressMode: 2
+    filter: 
+    bundle: scenes_loadadditivescene_unity.bundle
+  - asset: Assets/xasset/Samples/Arts/Scenes/Additive.unity
+    bundleMode: 3
+    addressMode: 2
+    filter: 
+    bundle: scenes_additive_unity.bundle
+  - asset: Assets/xasset/Samples/Arts/Textures/Logo.png
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Textures/Borders/Basic/Basic Filled 10px.png
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Textures/Borders/Basic/Basic Outline 10px -
+      Stroke 4px.png
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Textures/Borders/Basic/Basic Outline 10px -
+      Stroke 8px.png
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Textures/Borders/Basic/Basic Outline 10px -
+      Stroke 5px.png
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Textures/unity-logo-white.png
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Textures/hypergryph.png
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Prefabs/Animations/Blink.controller
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Textures/jb_beam.png
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Prefabs/Animations/Blink.anim
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Prefabs/Animations/MessageBox.anim
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Shaders/SimpleGrabPassBlur.shader
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Textures/Borders/Basic/Basic Outline 10px -
+      Stroke 10px.png
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Prefabs/Animations/MessageBox.controller
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Shaders/UIBlur.mat
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 
+  - asset: Assets/xasset/Samples/Arts/Prefabs/Plane.prefab
+    bundleMode: 0
+    addressMode: 0
+    filter: 
+    bundle: 

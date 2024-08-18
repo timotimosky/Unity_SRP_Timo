@@ -1,0 +1,21 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.14f1c1
+CRC: 1765537103
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: ebb8af6869cdf6c464120d409fa01d43
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: bb8521372c98e74594d3b7eb1b0a7a88
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: b6002c93171bd5aafb126f01b4701880
+HashAppended: 0
+ClassTypes:
+- Class: 48
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/SRP/Shaders/oldShader/BoxShader.shader
+Dependencies: []

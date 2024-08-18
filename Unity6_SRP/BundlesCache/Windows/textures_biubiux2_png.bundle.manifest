@@ -1,0 +1,23 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.14f1c1
+CRC: 2194706385
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: c569f1620662c3af1accd4b7d92078ac
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 9f349c36d7a6532f767333f9299b3e74
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: f172a80f4353f181c5beb337401cc3a9
+HashAppended: 0
+ClassTypes:
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 213
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/xasset/Samples/Arts/Textures/biubiux2.png
+Dependencies: []

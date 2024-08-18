@@ -28,7 +28,7 @@ public class CustomRenderPipelineAsset : RenderPipelineAsset {
 	[SerializeField]
 	PostFXSettings postFXSettings = default;
 
-#if UNITY_EDITOR
+
     [MenuItem("SRP/Create/Render Pipeline Asset")]
     static void CreateSrpPipeline()
     {
@@ -51,5 +51,4 @@ public class CustomRenderPipelineAsset : RenderPipelineAsset {
             AssetDatabase.CreateAsset(instance, pathName);
         }
     }
-#endif
 }

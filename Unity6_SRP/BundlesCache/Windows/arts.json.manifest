@@ -1,0 +1,29 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.14f1c1
+CRC: 2576531141
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 0173ac6f98dd861eb25e8b1169ae36b3
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: e0ff304b7ec044222840a82b108e7974
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: c0f2542daf9131597cfc5931b1c9ee05
+HashAppended: 0
+ClassTypes:
+- Class: 114
+  Script: {fileID: 11500000, guid: e54130b1aca6c074c9824d66679bb2ed, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers:
+- AssemblyName: xasset
+  ClassName: xasset.ManifestAsset
+- AssemblyName: xasset
+  ClassName: xasset.ManifestBundle
+- AssemblyName: xasset
+  ClassName: xasset.ManifestGroup
+Assets:
+- Assets/Arts.asset
+Dependencies: []
