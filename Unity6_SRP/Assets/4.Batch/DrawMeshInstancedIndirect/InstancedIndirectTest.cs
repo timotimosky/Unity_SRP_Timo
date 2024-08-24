@@ -1,5 +1,6 @@
 using UnityEngine;
 
+//ª·±¿¿£
 public class InstancedIndirectTest : MonoBehaviour
 {
     public int instanceCount = 100000;

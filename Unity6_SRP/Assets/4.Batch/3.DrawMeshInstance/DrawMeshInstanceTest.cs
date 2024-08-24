@@ -198,23 +198,6 @@ public class DrawMeshInstanceTest : MonoBehaviour {
         // Graphics.DrawMesh(mesh, pos, Quaternion.identity, material, 2 << 1, Camera.main, 0, block); ;
     }
 
-
-
-    void OnPostRender() //RequireComponent camera
-    {
-        if (drawMode != DrawMode.DrawMeshNow)
-            return;
-        Debug.Log("实例化绘制");
-        CollectionDrawData();
-        SetBlock();
-        int i = 0;
-        foreach (PerObjectMaterialProperties prop in materialProperties)
-        {
-            i++;
-            Graphics.DrawMeshNow(mesh, prop.position, prop.rotation);
-        }
-    }
-
     public bool EnableInstancing()
     {
         material.enableInstancing = true;
@@ -278,14 +261,73 @@ public class DrawMeshInstanceTest : MonoBehaviour {
             block = new MaterialPropertyBlock();
         }
     }
+
+    void Start()
+    {
+
+        CommandBufferForDrawMeshInstanced();
+    }
+
     NativeArray<int> cullResult;
     // 两者都需要在for循环内部，每次单独提交
     // 但 drawmeshNow 用于OnPostRender
     // DrawMeshInstanced 用于Update中
     void Update () {
 
-        RealDraw();
+
+        if (drawMode == DrawMode.DrawMeshNow) 
+        {
+            //内置管线DrawMeshNow是在OnRenderObject中被调用，URP则是endContextRendering
+           // UnityEngine.Rendering.RenderPipelineManager.endContextRendering -= CallBackDraw;
+           // UnityEngine.Rendering.RenderPipelineManager.endContextRendering += CallBackDraw;
+        }
+        else
+            RealDraw();
     }
+
+
+    void CallBackDraw(ScriptableRenderContext mScriptableRenderContext, List<Camera> cameras)
+    {
+        if (drawMode != DrawMode.DrawMeshNow)
+            return;
+        Debug.Log("实例化绘制");
+        CollectionDrawData();
+        SetBlock();
+        int i = 0;
+        foreach (PerObjectMaterialProperties prop in materialProperties)
+        {
+            material.SetPass(0);
+            i++;
+            Graphics.DrawMeshNow(mesh, prop.position, prop.rotation);
+        }
+    }
+    void OnDrawGizmos()
+    {
+        if (drawMode != DrawMode.DrawMeshNow)
+            return;
+        Debug.Log("实例化绘制");
+        CollectionDrawData();
+        SetBlock();
+        int i = 0;
+        foreach (PerObjectMaterialProperties prop in materialProperties)
+        {
+            i++;
+            Graphics.DrawMeshNow(mesh, prop.position, prop.rotation);
+        }
+    }
+
+    private void OnGUI()
+    {
+        if (GUILayout.Button("<size=50>当位置发生变化时候在更新</size>"))
+        {
+            if (drawMode == DrawMode.ComputeInstance)
+            {
+                CommandBufferForDrawMeshInstanced();
+            }
+        }
+    }
+
+
 
     void RealDraw()
     {
@@ -336,7 +378,11 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
     void CommandBufferForDrawMeshInstanced()
     {
-        ClearCommandBufferDraw();
+        if (drawMode != DrawMode.ComputeInstance)
+        {
+            return;
+        }
+         ClearCommandBufferDraw();
         commandBuffer = CommandBufferPool.Get("DrawMeshInstanced");
         commandBuffer.DrawMeshInstanced(mesh, 0, material, 0, matrix4x4s, matrix4x4s.Length, block);
         bufferCamera.AddCommandBuffer(CameraEvent.AfterForwardOpaque, commandBuffer);

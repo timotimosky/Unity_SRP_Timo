@@ -83,9 +83,10 @@ public class TestPropertyBlock : MonoBehaviour {
 
 
                 //prop = new MaterialPropertyBlock();
-                listProp[i].GetComponent<Renderer>().GetPropertyBlock(prop);
+                Renderer mRenderer = listProp[i].GetComponent<Renderer>();
+                mRenderer.GetPropertyBlock(prop);
                 prop.SetColor(colorID, new Color(r, g, b, 1));
-                listProp[i].GetComponent<Renderer>().SetPropertyBlock(prop);
+                mRenderer.SetPropertyBlock(prop);
             }
             sw.Stop();
             UnityEngine.Debug.Log(string.Format("MaterialPropertyBlock total: {0:F4} ms", (float)sw.ElapsedTicks * 1000 / Stopwatch.Frequency));
