@@ -83,7 +83,7 @@
 				UNITY_SETUP_INSTANCE_ID(v); 
 				//使实例索引在frag中可用
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
-				o.pos = TransformObjectToHClip(v.vertex);
+				o.pos = TransformObjectToHClip(v.vertex.xyz);
 				o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
 				o.uv.zw = v.uv;
 				return o;

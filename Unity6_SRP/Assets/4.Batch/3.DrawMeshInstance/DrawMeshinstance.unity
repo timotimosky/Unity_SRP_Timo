@@ -151,15 +151,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_prefab: {fileID: 2406525217209616907, guid: bb49f4ed738269943b90de47088c99d7, type: 3}
-  mesh: {fileID: 4300000, guid: f0a6094c3d436d847bd2f0893b2b9b40, type: 2}
-  material: {fileID: 2100000, guid: a3efd82b062695446a8b83f4f12477f9, type: 2}
+  instanceMesh: {fileID: 4300000, guid: f0a6094c3d436d847bd2f0893b2b9b40, type: 2}
+  instanceMaterial: {fileID: 2100000, guid: a3efd82b062695446a8b83f4f12477f9, type: 2}
+  InstancedIndirectMaterial: {fileID: 2100000, guid: e9e9cbd089e52c54ebe8ea784ad10da0, type: 2}
   lightProbeVolume: {fileID: 0}
   shadowCastingMode: 0
   receiveShadow: 1
-  turnOnInstance: 1
+  drawMode: 5
   ifCull: 1
-  useCommandBuffer: 0
-  TestNum: 1020
+  instanceCount: 1023
+  cachedInstanceCount: 0
+  subMeshIndex: 0
   layer: 1
   bufferCamera: {fileID: 0}
   needRenderIndex: 0

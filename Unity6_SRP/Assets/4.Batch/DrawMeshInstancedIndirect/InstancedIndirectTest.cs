@@ -1,6 +1,8 @@
 using UnityEngine;
 
-//会崩溃
+//URP下不支持表面着色器
+//URP使用InstancedIndirect，shader必须要加这一句预编译指令
+//#pragma instancing_options procedural:setup
 public class InstancedIndirectTest : MonoBehaviour
 {
     public int instanceCount = 100000;
@@ -31,7 +33,9 @@ public class InstancedIndirectTest : MonoBehaviour
             instanceCount = (int)Mathf.Clamp(instanceCount + Input.GetAxis("Horizontal") * 40000, 1.0f, 5000000.0f);
 
         // Render
-        Graphics.DrawMeshInstancedIndirect(instanceMesh, subMeshIndex, instanceMaterial, new Bounds(Vector3.zero, new Vector3(100.0f, 100.0f, 100.0f)), argsBuffer);
+        Graphics.DrawMeshInstancedIndirect(instanceMesh, subMeshIndex, instanceMaterial, 
+            new Bounds(Vector3.zero, new Vector3(100.0f, 100.0f, 100.0f)), 
+            argsBuffer);
     }
 
     void OnGUI()

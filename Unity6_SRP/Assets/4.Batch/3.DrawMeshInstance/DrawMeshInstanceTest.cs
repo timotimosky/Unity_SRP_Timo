@@ -1,10 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.ComponentModel;
-using System.Numerics;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.UIElements.Experimental;
+using Graphics = UnityEngine.Graphics;
 using Matrix4x4 = UnityEngine.Matrix4x4;
 using Quaternion = UnityEngine.Quaternion;
 using Vector3 = UnityEngine.Vector3;
@@ -15,9 +13,10 @@ public enum DrawMode
 {
     Defalt=0,
     GpuInstance=1,
-    ComputeInstance=2,
+    ComondInstance=2,
     DrawMeshNow=3,
     DrawMesh =4,
+    InstancedInstanceByComputeBuffer=5,
 }
 
 //非常适合草地绘制
@@ -31,7 +30,7 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 		smoothnessId = Shader.PropertyToID("_Smoothness");
 
 	public List<PerObjectMaterialProperties> materialProperties;
-    public List<PerObjectMaterialProperties> needRenderMaterialProperties;
+    public List<PerObjectMaterialProperties> needRenderMaterialProperties = new List<PerObjectMaterialProperties>();
     public GameObject m_prefab;
     CullBound cullBound;
     //预制体可能由多个mesh组成
@@ -42,12 +41,17 @@ public class DrawMeshInstanceTest : MonoBehaviour {
     Material[] sharedMaterial;
 
     [SerializeField]
-	Mesh mesh = default;
+	Mesh instanceMesh = default;
 
 	[SerializeField]
-	Material material = default;
+	Material instanceMaterial = default;
 
-	[SerializeField]
+
+    //ComputeBuffer绘制的间接实例，要用特殊shader
+    [SerializeField]
+    Material InstancedIndirectMaterial = default;
+
+    [SerializeField]
 	LightProbeProxyVolume lightProbeVolume = null;
 
     [SerializeField]
@@ -69,37 +73,47 @@ public class DrawMeshInstanceTest : MonoBehaviour {
     public DrawMode drawMode = DrawMode.Defalt;
     public bool ifCull = true;
 
-    public int TestNum = 1023;
+    public int instanceCount = 1023;
+    public int cachedInstanceCount = 0;
+    private int cachedSubMeshIndex = -1;
+    public int subMeshIndex = 0;
+
     public int layer = 0;
 
     public Camera bufferCamera;
     public void InitFakerData()
     {
-        materialProperties = new List<PerObjectMaterialProperties>(TestNum);
-        for (int i = 0; i < TestNum; i++)
+
+        if (instanceMesh != null)
+            subMeshIndex = Mathf.Clamp(subMeshIndex, 0, instanceMesh.subMeshCount - 1);
+        materialProperties = new List<PerObjectMaterialProperties>(instanceCount);
+        for (int i = 0; i < instanceCount; i++)
         {
             PerObjectMaterialProperties perObjectMaterialProperties = new PerObjectMaterialProperties();
-            materialProperties.Add(perObjectMaterialProperties);
-            materialProperties[i].position = Random.insideUnitSphere * 100f;
-            materialProperties[i].scale = Vector3.one * Random.Range(0.5f, 1.5f);
-            materialProperties[i].rotation = Quaternion.Euler(Random.value * 360f, Random.value * 360f, Random.value * 360f);
+            perObjectMaterialProperties.position = Random.insideUnitSphere * 100f;
+            perObjectMaterialProperties.scale = Vector3.one * Random.Range(0.5f, 1.5f);
+            perObjectMaterialProperties.rotation = Quaternion.Euler(Random.value * 360f, Random.value * 360f, Random.value * 360f);
 
-            materialProperties[i].SetMatrix4X4();
-            materialProperties[i].baseColor = new Vector4(Random.value, Random.value, Random.value, Random.Range(0.5f, 1f));
-            materialProperties[i].metallic = Random.value < 0.25f ? 1f : 0f;
-            materialProperties[i].smoothness = Random.Range(0.05f, 0.95f);
+            perObjectMaterialProperties.SetMatrix4X4();
+            perObjectMaterialProperties.baseColor = new Vector4(Random.value, Random.value, Random.value, Random.Range(0.5f, 1f));
+            perObjectMaterialProperties.metallic = Random.value < 0.25f ? 1f : 0f;
+            perObjectMaterialProperties.smoothness = Random.Range(0.05f, 0.95f);
+
+            materialProperties.Add(perObjectMaterialProperties);
         }
+        cachedInstanceCount = instanceCount;
+        cachedSubMeshIndex = subMeshIndex;
     }
 
 
 
 
-    public void CollectionDrawData()
+    public void GetCullingResults()
 	{
         if(ifCull)
             cullResult = cullBound.ExcuteCullJob(materialProperties);
-
-        needRenderMaterialProperties = new List<PerObjectMaterialProperties>();
+  
+        needRenderMaterialProperties.Clear();
         for (int i=0; i < materialProperties.Count; i++)
         {
             PerObjectMaterialProperties prop= materialProperties[i];
@@ -144,7 +158,7 @@ public class DrawMeshInstanceTest : MonoBehaviour {
         //如果probe灯光存在
         if (!lightProbeVolume)
         {
-            var positions = new Vector3[needRenderCount];
+            Vector3[] positions = new Vector3[needRenderCount];
             for (int i = 0; i < matrix4x4s.Length; i++)
             {
                 positions[i] = matrix4x4s[i].GetColumn(3);
@@ -159,11 +173,54 @@ public class DrawMeshInstanceTest : MonoBehaviour {
         }
     }
 
+    private ComputeBuffer positionBuffer;
+    private ComputeBuffer argsBuffer;
+    private uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
+    Vector4[] computePositions;
+    private void SetComputeBuffer()
+    {
+        if (positionBuffer != null)
+            positionBuffer.Release();
+
+        Debug.Log("设置剔除后的data=" + needRenderCount);
+        positionBuffer = new ComputeBuffer(needRenderCount, 16);
+        computePositions = new Vector4[needRenderCount];
+
+        for (int i = 0; i < needRenderCount; i++)
+        {
+            PerObjectMaterialProperties prop = needRenderMaterialProperties[i];
+            computePositions[i] = new Vector4(prop.position.x, prop.position.y, prop.position.z, prop.scale.x);
+        }
+
+
+        positionBuffer.SetData(computePositions);
+        InstancedIndirectMaterial.SetBuffer("positionBuffer", positionBuffer);
+
+
+        // Indirect args
+        if (instanceMesh != null)
+        {
+            args[0] = (uint)instanceMesh.GetIndexCount(subMeshIndex);
+            args[1] = (uint)instanceCount;
+            args[2] = (uint)instanceMesh.GetIndexStart(subMeshIndex);
+            args[3] = (uint)instanceMesh.GetBaseVertex(subMeshIndex);
+        }
+        else
+        {
+            args[0] = args[1] = args[2] = args[3] = 0;
+        }
+        argsBuffer.SetData(args);
+
+        cachedInstanceCount = instanceCount;
+        cachedSubMeshIndex = subMeshIndex;
+    }
+
+
     public void DrawInstanceOnce()
     {
         SetBlock();
 
-        if (drawMode == DrawMode.ComputeInstance)
+        if (drawMode == DrawMode.ComondInstance)
         {
             CommandBufferForDrawMeshInstanced();
             Debug.LogError("渲染..........Buffer===");
@@ -181,8 +238,8 @@ public class DrawMeshInstanceTest : MonoBehaviour {
             */
             LightProbeUsage mLightProbeUsage = lightProbeVolume ? LightProbeUsage.UseProxyVolume : LightProbeUsage.CustomProvided;
 
-            if (mesh)
-                Graphics.DrawMeshInstanced(mesh, 0, material, matrix4x4s, matrix4x4s.Length, block,
+            if (instanceMesh)
+                Graphics.DrawMeshInstanced(instanceMesh, 0, instanceMaterial, matrix4x4s, matrix4x4s.Length, block,
                 shadowCastingMode, receiveShadow, layer, null, mLightProbeUsage, lightProbeVolume);
             else
             {
@@ -200,8 +257,8 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
     public bool EnableInstancing()
     {
-        material.enableInstancing = true;
-        if (!material.enableInstancing)
+        instanceMaterial.enableInstancing = true;
+        if (!instanceMaterial.enableInstancing)
         {
             Debug.LogError("无法开启 !material.enableInstancing");
             enabled = false;
@@ -227,15 +284,15 @@ public class DrawMeshInstanceTest : MonoBehaviour {
         cullBound = new CullBound(Camera.main);
         var meshFilter = m_prefab.GetComponent<MeshFilter>();
 
-        if (mesh == null)
-            mesh = m_prefab.GetComponent<MeshFilter>().sharedMesh;
+        if (instanceMesh == null)
+            instanceMesh = m_prefab.GetComponent<MeshFilter>().sharedMesh;
 
-        material = mMeshRenderer.sharedMaterial;
-        if (material == null)
-            material = m_prefab.GetComponent<MeshRenderer>().sharedMaterial;
+        instanceMaterial = mMeshRenderer.sharedMaterial;
+        if (instanceMaterial == null)
+            instanceMaterial = m_prefab.GetComponent<MeshRenderer>().sharedMaterial;
 
         //如果一个预制体 由多个mesh组成，则需要绘制多少次
-        if (mesh == null)
+        if (instanceMesh == null)
         {
             meshFs = m_prefab.GetComponentsInChildren<MeshFilter>();
             sharedMesh = new Mesh[meshFs.Length];
@@ -244,7 +301,7 @@ public class DrawMeshInstanceTest : MonoBehaviour {
                 sharedMesh[i] = meshFs[i].sharedMesh;
             }
         }
-        if (material == null)
+        if (instanceMaterial == null)
         {
             renders = m_prefab.GetComponentsInChildren<Renderer>();
             sharedMaterial = new Material[renders.Length];
@@ -260,6 +317,9 @@ public class DrawMeshInstanceTest : MonoBehaviour {
         {
             block = new MaterialPropertyBlock();
         }
+
+        //只用于间接实例化
+        argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
     }
 
     void Start()
@@ -272,14 +332,28 @@ public class DrawMeshInstanceTest : MonoBehaviour {
     // 两者都需要在for循环内部，每次单独提交
     // 但 drawmeshNow 用于OnPostRender
     // DrawMeshInstanced 用于Update中
-    void Update () {
-
-
+    void Update () 
+    {
+        if (cachedInstanceCount != instanceCount || cachedSubMeshIndex != subMeshIndex)
+        {
+            InitFakerData();
+            if (drawMode == DrawMode.InstancedInstanceByComputeBuffer)
+            {
+                SetComputeBuffer();
+            }
+        }
         if (drawMode == DrawMode.DrawMeshNow) 
         {
             //内置管线DrawMeshNow是在OnRenderObject中被调用，URP则是endContextRendering
            // UnityEngine.Rendering.RenderPipelineManager.endContextRendering -= CallBackDraw;
            // UnityEngine.Rendering.RenderPipelineManager.endContextRendering += CallBackDraw;
+        }
+        else if (drawMode == DrawMode.InstancedInstanceByComputeBuffer)
+        {
+            // Render
+            Graphics.DrawMeshInstancedIndirect(instanceMesh, subMeshIndex, InstancedIndirectMaterial,
+                new Bounds(Vector3.zero, new Vector3(100.0f, 100.0f, 100.0f)),
+                argsBuffer);
         }
         else
             RealDraw();
@@ -291,14 +365,14 @@ public class DrawMeshInstanceTest : MonoBehaviour {
         if (drawMode != DrawMode.DrawMeshNow)
             return;
         Debug.Log("实例化绘制");
-        CollectionDrawData();
+        GetCullingResults();
         SetBlock();
         int i = 0;
         foreach (PerObjectMaterialProperties prop in materialProperties)
         {
-            material.SetPass(0);
+            instanceMaterial.SetPass(0);
             i++;
-            Graphics.DrawMeshNow(mesh, prop.position, prop.rotation);
+            Graphics.DrawMeshNow(instanceMesh, prop.position, prop.rotation);
         }
     }
     void OnDrawGizmos()
@@ -306,21 +380,25 @@ public class DrawMeshInstanceTest : MonoBehaviour {
         if (drawMode != DrawMode.DrawMeshNow)
             return;
         Debug.Log("实例化绘制");
-        CollectionDrawData();
+        GetCullingResults();
         SetBlock();
         int i = 0;
         foreach (PerObjectMaterialProperties prop in materialProperties)
         {
             i++;
-            Graphics.DrawMeshNow(mesh, prop.position, prop.rotation);
+            Graphics.DrawMeshNow(instanceMesh, prop.position, prop.rotation);
         }
     }
 
     private void OnGUI()
     {
+
+        GUI.Label(new Rect(265, 25, 200, 30), "Instance Count: " + instanceCount.ToString());
+        instanceCount = (int)GUI.HorizontalSlider(new Rect(150, 80, 200, 30), (float)instanceCount, 1.0f, 100000.0f);
+
         if (GUILayout.Button("<size=50>当位置发生变化时候在更新</size>"))
         {
-            if (drawMode == DrawMode.ComputeInstance)
+            if (drawMode == DrawMode.ComondInstance)
             {
                 CommandBufferForDrawMeshInstanced();
             }
@@ -331,9 +409,7 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
     void RealDraw()
     {
-        CollectionDrawData();
-
-
+        GetCullingResults();
 
         if (drawMode == DrawMode.DrawMesh)
         {
@@ -341,7 +417,7 @@ public class DrawMeshInstanceTest : MonoBehaviour {
             foreach (PerObjectMaterialProperties prop in needRenderMaterialProperties)
             {
                 i++;
-                Graphics.DrawMesh(mesh, prop.position, prop.rotation, material, 0);
+                Graphics.DrawMesh(instanceMesh, prop.position, prop.rotation, instanceMaterial, 0);
             }
             return;     
         }
@@ -378,13 +454,13 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
     void CommandBufferForDrawMeshInstanced()
     {
-        if (drawMode != DrawMode.ComputeInstance)
+        if (drawMode != DrawMode.ComondInstance)
         {
             return;
         }
          ClearCommandBufferDraw();
         commandBuffer = CommandBufferPool.Get("DrawMeshInstanced");
-        commandBuffer.DrawMeshInstanced(mesh, 0, material, 0, matrix4x4s, matrix4x4s.Length, block);
+        commandBuffer.DrawMeshInstanced(instanceMesh, 0, instanceMaterial, 0, matrix4x4s, matrix4x4s.Length, block);
         bufferCamera.AddCommandBuffer(CameraEvent.AfterForwardOpaque, commandBuffer);
     }
         
