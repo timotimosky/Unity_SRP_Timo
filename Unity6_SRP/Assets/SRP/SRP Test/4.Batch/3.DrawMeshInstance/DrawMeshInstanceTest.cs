@@ -4,11 +4,21 @@ using System.Numerics;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements.Experimental;
 using Matrix4x4 = UnityEngine.Matrix4x4;
 using Quaternion = UnityEngine.Quaternion;
 using Vector3 = UnityEngine.Vector3;
 using Vector4 = UnityEngine.Vector4;
 
+
+public enum DrawMode
+{
+    Defalt=0,
+    GpuInstance=1,
+    ComputeInstance=2,
+    DrawMeshNow=3,
+    DrawMesh =4,
+}
 
 //非常适合草地绘制
 
@@ -56,12 +66,8 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
 	MaterialPropertyBlock block;
     MeshRenderer mMeshRenderer;
-    //这个变量类似于unity5.6材质属性的Enable Instance Variants勾选项
-    public bool turnOnInstance = true;
-
+    public DrawMode drawMode = DrawMode.Defalt;
     public bool ifCull = true;
-
-    public bool useCommandBuffer = false;
 
     public int TestNum = 1023;
     public int layer = 0;
@@ -157,12 +163,12 @@ public class DrawMeshInstanceTest : MonoBehaviour {
     {
         SetBlock();
 
-        if (useCommandBuffer)
+        if (drawMode == DrawMode.ComputeInstance)
         {
             CommandBufferForDrawMeshInstanced();
             Debug.LogError("渲染..........Buffer===");
         }
-        else if (turnOnInstance && EnableInstancing())
+        else if (drawMode == DrawMode.GpuInstance && EnableInstancing())
         {
             /*
             Mesh 索要绘制的网格
@@ -196,13 +202,16 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
     void OnPostRender() //RequireComponent camera
     {
+        if (drawMode != DrawMode.DrawMeshNow)
+            return;
+        Debug.Log("实例化绘制");
+        CollectionDrawData();
+        SetBlock();
         int i = 0;
         foreach (PerObjectMaterialProperties prop in materialProperties)
         {
-           // matrix4x4s[i] = prop.matrix4X4;
             i++;
-
-           // Graphics.DrawMeshNow(mesh, new Vector3(i, i, i), Quaternion.identity);
+            Graphics.DrawMeshNow(mesh, prop.position, prop.rotation);
         }
     }
 
@@ -275,7 +284,26 @@ public class DrawMeshInstanceTest : MonoBehaviour {
     // DrawMeshInstanced 用于Update中
     void Update () {
 
+        RealDraw();
+    }
+
+    void RealDraw()
+    {
         CollectionDrawData();
+
+
+
+        if (drawMode == DrawMode.DrawMesh)
+        {
+            int i = 0;
+            foreach (PerObjectMaterialProperties prop in needRenderMaterialProperties)
+            {
+                i++;
+                Graphics.DrawMesh(mesh, prop.position, prop.rotation, material, 0);
+            }
+            return;     
+        }
+
 
         needRenderIndex = 0;
         while (true)
@@ -308,14 +336,10 @@ public class DrawMeshInstanceTest : MonoBehaviour {
 
     void CommandBufferForDrawMeshInstanced()
     {
-        if (useCommandBuffer)
-        {
-            ClearCommandBufferDraw();
-
-            commandBuffer = CommandBufferPool.Get("DrawMeshInstanced");
-            commandBuffer.DrawMeshInstanced(mesh, 0, material,0, matrix4x4s, matrix4x4s.Length, block);
-            bufferCamera.AddCommandBuffer(CameraEvent.AfterForwardOpaque, commandBuffer);
-        }
+        ClearCommandBufferDraw();
+        commandBuffer = CommandBufferPool.Get("DrawMeshInstanced");
+        commandBuffer.DrawMeshInstanced(mesh, 0, material, 0, matrix4x4s, matrix4x4s.Length, block);
+        bufferCamera.AddCommandBuffer(CameraEvent.AfterForwardOpaque, commandBuffer);
     }
         
     CommandBuffer commandBuffer = null;
