@@ -1,8 +1,10 @@
-﻿using UnityEngine;
+﻿using Unity.Entities;
+using UnityEngine;
 
 //组织每个物体的参数
 [DisallowMultipleComponent]
-public class PerObjectMaterialProperties {
+public class PerObjectMaterialProperties : IComponentData
+{
 
 	public bool dirty = false;
 

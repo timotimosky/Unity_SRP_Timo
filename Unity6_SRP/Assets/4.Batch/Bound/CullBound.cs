@@ -1,10 +1,8 @@
 using System.Collections.Generic;
-using TMPro;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public enum InsideResult//视锥体检测的结果
 {
@@ -13,7 +11,7 @@ public enum InsideResult//视锥体检测的结果
     Partial//部分包含
 };
 
-public class CullBound 
+public struct CullBound 
 {
     struct CullJob : IJobFor
     {
@@ -98,16 +96,20 @@ public class CullBound
     private NativeArray<float3> centerList;//给Ecs用的裁剪面
     private NativeArray<float> raidusList;//给Ecs用的裁剪面
     private NativeArray<int> ifCullList;//给Ecs用的裁剪面
-    private Plane[] CameraSourcePlanes = new Plane[6];//原生获得的裁剪面
+    private Plane[] CameraSourcePlanes;//原生获得的裁剪面
     private Camera camera; //主相机，需要外部传入
 
-    private int persistentCount = 1023;
+    private int persistentCount;
 
     public CullBound(Camera camera)
     {
         this.camera= camera;
+        CameraSourcePlanes = new Plane[6];//原生获得的裁剪面
         frustumPlanes = new NativeArray<float4>(6, Allocator.Persistent);
-        Persistent();
+        persistentCount = 1023;
+        centerList = new NativeArray<float3>(persistentCount, Allocator.Persistent);
+        raidusList = new NativeArray<float>(persistentCount, Allocator.Persistent);
+        ifCullList = new NativeArray<int>(persistentCount, Allocator.Persistent);
     }
 
     private void Persistent()

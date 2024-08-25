@@ -106,7 +106,16 @@ public class DrawMeshInstanceTest : MonoBehaviour {
     }
 
 
+    void OnDisable()
+    {
+        if (positionBuffer != null)
+            positionBuffer.Release();
+        positionBuffer = null;
 
+        if (argsBuffer != null)
+            argsBuffer.Release();
+        argsBuffer = null;
+    }
 
     public void GetCullingResults()
 	{
