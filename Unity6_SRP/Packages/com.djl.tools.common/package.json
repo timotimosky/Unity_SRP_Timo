@@ -1,0 +1,14 @@
+﻿{
+  "name": "com.djl.tools.djlcommon",
+  "version": "0.0.1",
+  "displayName": "DJL Common",
+  "description": "A common tool",
+  "unity": "2020.3",
+  "unityRelease": "19f1",
+  "documentationUrl": "https://example.com/",
+  "changelogUrl": "https://example.com/changelog.html",
+  "licensesUrl": "https://example.com/licensing.html",
+  "keywords": [
+    "common"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+    "name": "Tools.DJLCommon.Tests",
+    "rootNamespace": "",
+    "references": [
+        "GUID:a892a6d82caa1174192c7d9efbc1ad6f",
+        "GUID:f5e7d9de6f5335d4892fde1f3bd0abbe"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

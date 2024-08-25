@@ -11,86 +11,18 @@ public enum InsideResult//视锥体检测的结果
     Partial//部分包含
 };
 
+
+public enum JonRunMode//job的执行模式
+{
+    immediatelyInMainThread = 0,//立即在主线程上运行
+    RunInJobThread,//在一个工作线程上稍后运行。
+    Partial//部分包含
+};
+/// <summary>
+/// 相机包围盒裁剪；
+/// </summary>
 public struct CullBound 
 {
-    struct CullJob : IJobFor
-    {
-        [ReadOnly]
-        public NativeArray<float4> readFrustumPlanes;//给Ecs用的裁剪面
-
-        [ReadOnly]
-        public NativeArray<float3> readCenterList;
-
-        [ReadOnly]
-        public NativeArray<float> readRaidusList;
-
-        //默认情况下，容器被假定为读取&写
-
-        //0:外侧
-        //1:内
-        //2:部分
-        public NativeArray<int> out_ifCullList;
-
-
-        //增量时间必须复制到作业中，因为作业通常没有帧的概念。
-        //主线程等待作业同一帧或下一帧，但是job应该独立于job在工作线程上运行的时间来完成工作。
-        public float deltaTime;
-
-        // 在作业中实际运行的代码
-        public void Execute(int i)
-        {
-            out_ifCullList[i] = Inside(readCenterList[i], readRaidusList[i]);
-        }
-        /// <summary>
-        /// 球状剔除
-        /// </summary>
-        /// <param name="center">球中心</param>
-        /// <param name="radius">半径</param>
-        public int Inside(float3 center, float radius)
-        {
-            int length = readFrustumPlanes.Length;
-            bool all_in = true;
-            for (int i = 0; i < length; i++)
-            {
-                float4 plane = readFrustumPlanes[i];
-                float3 normal = plane.xyz;
-                var distance = math.dot(normal, center) + plane.w;
-                if (distance < -radius)
-                    return 0;
-
-                all_in = all_in && (distance > radius);
-            }
-
-            return all_in ? 1 : 2;
-        }
-
-        /// <summary>
-        /// 方形包围盒剔除
-        /// </summary>
-        ///这里唯一的区别就是半径的算法不同，盒子是将其 extern 在对应法线平面上进行投影当做半径，
-        ///当然也可以理解为立方体顶点到中心的向量在法线平面上的投影。这里的算法中使用的 c
-        ///enter 和 extents 可以直接从 BoxCollider 中把数据抄过来。
-        /// <param name="center">盒子中心</param>
-        /// <param name="extents">外延尺寸（size的一半）</param>
-        public InsideResult Inside(float3 center, float3 extents)
-        {
-            int length = readFrustumPlanes.Length;
-            bool all_in = true;
-            for (int i = 0; i < length; i++)
-            {
-                float4 plane = readFrustumPlanes[i];
-                float3 normal = plane.xyz;
-                float dist = math.dot(normal, center) + plane.w;
-                float radius = math.dot(extents, math.abs(normal));
-                if (dist <= -radius)
-                    return InsideResult.Out;
-
-                all_in &= dist > radius;
-            }
-
-            return all_in ? InsideResult.In : InsideResult.Partial;
-        }
-    }
 
     private NativeArray<float4> frustumPlanes;//给Ecs用的裁剪面
     private NativeArray<float3> centerList;//给Ecs用的裁剪面
@@ -110,6 +42,7 @@ public struct CullBound
         centerList = new NativeArray<float3>(persistentCount, Allocator.Persistent);
         raidusList = new NativeArray<float>(persistentCount, Allocator.Persistent);
         ifCullList = new NativeArray<int>(persistentCount, Allocator.Persistent);
+        jobExcuteMode = JonRunMode.RunInJobThread;
     }
 
     private void Persistent()
@@ -150,6 +83,8 @@ public struct CullBound
         return !GeometryUtility.TestPlanesAABB(CameraSourcePlanes, volumeAABB);
     }
 
+    public JonRunMode jobExcuteMode;
+
 
     public NativeArray<int> ExcuteCullJob(List<PerObjectMaterialProperties> materialProperties)
     {
@@ -159,7 +94,7 @@ public struct CullBound
         {
             persistentCount = cout;
             Persistent();
-            Debug.LogError("进行一次预分配"+ cout);
+            Debug.LogError("进行一次预分配" + cout);
         }
         for (var i = 0; i < cout; i++)
         {
@@ -167,20 +102,89 @@ public struct CullBound
             if (mPerObjectMaterialProperties == null)
                 Debug.LogError("不可思议");
             centerList[i] = mPerObjectMaterialProperties.position;
-            raidusList[i] = mPerObjectMaterialProperties.scale.x*10;
+            raidusList[i] = mPerObjectMaterialProperties.scale.x * 10;
         }
 
-        // Initialize the job data
         var job = new CullJob()
         {
             //NativeArray.Copy()
             readFrustumPlanes = frustumPlanes,
             readCenterList = centerList,
             readRaidusList = raidusList,
-            out_ifCullList= ifCullList
+            out_ifCullList = ifCullList
         };
-
+        //安排作业立即在主线程上运行。第一个参数是要执行多少次迭代。
         job.Run(cout);
+
+        // Native arrays must be disposed manually.
+        // centerList.Dispose();
+
         return job.out_ifCullList;
+    }
+
+
+
+    public void UpdateCheckJob(JobHandle mJobHandle)
+    {
+
+        if (mJobHandle.IsCompleted)
+        {
+            //OnCompleted();
+        }
+    }
+
+    public JobHandle ExcuteCullJobHandle(List<PerObjectMaterialProperties> materialProperties)
+    {
+        UpdateFrustumPlanes();
+        int cout = materialProperties.Count;
+        if (persistentCount < cout)
+        {
+            persistentCount = cout;
+            Persistent();
+            Debug.LogError("进行一次预分配" + cout);
+        }
+        for (var i = 0; i < cout; i++)
+        {
+            PerObjectMaterialProperties mPerObjectMaterialProperties = materialProperties[i];
+            if (mPerObjectMaterialProperties == null)
+                Debug.LogError("不可思议");
+            centerList[i] = mPerObjectMaterialProperties.position;
+            raidusList[i] = mPerObjectMaterialProperties.scale.x * 10;
+        }
+
+        var job = new CullJob()
+        {
+            //NativeArray.Copy()
+            readFrustumPlanes = frustumPlanes,
+            readCenterList = centerList,
+            readRaidusList = raidusList,
+            out_ifCullList = ifCullList
+        };
+        
+            //调度作业在一个工作线程上稍后运行。
+            //第一个参数是每次执行多少次迭代。
+            //第二个参数是用于该作业的依赖项的JobHandle。
+            //依赖项用于确保在依赖项完成执行后作业在工作线程上执行。
+            //在这种情况下，我们不需要我们的工作依赖于任何东西，所以我们可以使用默认的。
+            JobHandle sheduleJobDependency = new JobHandle();
+            JobHandle sheduleJobHandle = job.Schedule(cout,sheduleJobDependency);
+
+            // Schedule job to run on parallel worker threads.
+            // First parameter is how many for-each iterations to perform.
+            // The second parameter is the batch size,
+            //   essentially the no-overhead innerloop that just invokes Execute(i) in a loop.
+            //   When there is a lot of work in each iteration then a value of 1 can be sensible.
+            //   When there is very little work values of 32 or 64 can make sense.
+            // The third parameter is a JobHandle to use for this job's dependencies.
+            //   Dependencies are used to ensure that a job executes on worker threads after the dependency has completed execution.
+            JobHandle sheduleParralelJobHandle = job.ScheduleParallel(cout, 64, sheduleJobHandle);
+
+            // Ensure the job has completed.
+            // It is not recommended to Complete a job immediately,
+            // since that reduces the chance of having other jobs run in parallel with this one.
+            // You optimally want to schedule a job early in a frame and then wait for it later in the frame.
+            sheduleParralelJobHandle.Complete();
+       
+        return sheduleJobHandle;
     }
 }

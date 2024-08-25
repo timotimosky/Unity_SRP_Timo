@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.djl.tools.djlcommon": {
+      "version": "file:com.djl.tools.common",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.unity.bindings.openimageio": {
       "version": "1.0.0",
       "depth": 1,

@@ -78,7 +78,7 @@ public class CustomShaderGUI : ShaderGUI {
 		}
 
 		if (EditorGUI.EndChangeCheck()) {
-			SetShadowCasterPass();
+			SetShadowCECSFramePass();
 			CopyLightMappingProperties();
 		}
 	}
@@ -196,14 +196,14 @@ public class CustomShaderGUI : ShaderGUI {
 		}
 	}
 
-	void SetShadowCasterPass () {
+	void SetShadowCECSFramePass () {
 		MaterialProperty shadows = FindProperty("_Shadows", properties, false);
 		if (shadows == null || shadows.hasMixedValue) {
 			return;
 		}
 		bool enabled = shadows.floatValue < (float)ShadowMode.Off;
 		foreach (Material m in materials) {
-			m.SetShaderPassEnabled("ShadowCaster", enabled);
+			m.SetShaderPassEnabled("ShadowCECSFrame", enabled);
 		}
 	}
 }
